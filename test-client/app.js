@@ -16,6 +16,12 @@
  *   Tab A joins → gets existingMembers:[]  → waits
  *   Tab B joins → Tab A gets 'peer-joined' → Tab A sends offer
  *   Tab B receives offer → sends answer → both exchange ICE → media flows
+ *
+ * Phase 7 addition:
+ *   Before creating any RTCPeerConnection, we fetch short-lived TURN/STUN
+ *   credentials from Auth Service (via Gateway) and pass them in as
+ *   iceServers. This lets calls succeed even across restrictive NATs where
+ *   a direct P2P connection isn't possible.
  */
 
 'use strict';
@@ -44,6 +50,13 @@ let pc = null;
 
 /** @type {import('socket.io-client').Socket|null} */
 let socket = null;
+
+/**
+ * Cached ICE servers (STUN + TURN) fetched once at join time.
+ * Fetched fresh each time user clicks "Join Call" since credentials expire.
+ * @type {RTCIceServer[]|null}
+ */
+let cachedIceServers = null;
 
 /**
  * The socket ID of the remote peer we are currently connected to.
@@ -119,6 +132,40 @@ async function getMedia() {
         log('warn', 'If you see "NotReadableError" over file://, serve via: npx serve . and open http://localhost:3000');
         setStatus('error', 'Camera denied');
         throw err;
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PHASE 7 — Fetch TURN/STUN credentials from Auth Service (via Gateway)
+// ─────────────────────────────────────────────────────────────────────────────
+/**
+ * Fetches short-lived TURN/STUN credentials from Auth Service.
+ * Must be called fresh before each RTCPeerConnection — credentials
+ * expire after 10 minutes.
+ * @param {string} token — JWT access token
+ * @returns {Promise<RTCIceServer[]>}
+ */
+async function getIceServers(token) {
+    log('info', 'Fetching TURN/STUN credentials from Auth Service…');
+    try {
+        const res = await fetch('http://localhost:4000/api/v1/auth/turn-credentials', {
+            headers: { Authorization: `Bearer ${token}` },
+        });
+        const json = await res.json();
+
+        if (!json.success) {
+            throw new Error('Server returned success:false');
+        }
+
+        log('success', `Got ${json.data.iceServers.length} ICE server(s) — STUN + TURN ready`);
+        return json.data.iceServers;
+    } catch (err) {
+        log('error', `getIceServers() failed: ${err.message}`);
+        log('warn', 'Falling back to public Google STUN only (no TURN relay available)');
+        return [
+            { urls: 'stun:stun.l.google.com:19302' },
+            { urls: 'stun:stun1.l.google.com:19302' },
+        ];
     }
 }
 
@@ -243,94 +290,85 @@ function joinRoom(roomCode) {
 // ─────────────────────────────────────────────────────────────────────────────
 /**
  * Creates and returns a new RTCPeerConnection with:
- *   - Google's public STUN server (free, no credentials) for LAN/home-network use.
- *     TURN (Phase 7) will be added here later for restrictive NAT traversal.
+ *   - ICE servers (STUN + TURN) fetched from Auth Service (Phase 7) and
+ *     cached at join time — passed in as the `iceServers` argument, NOT
+ *     hardcoded, so credentials rotate correctly on every fresh join.
  *   - All local media tracks added via addTrack() BEFORE createOffer/createAnswer,
  *     so the tracks are included in the SDP negotiation.
  *   - ICE candidate trickle via onicecandidate → socket.emit('ice-candidate').
  *   - ontrack wired to the remote <video> element.
+ *   - iceConnectionState wired to the on-screen indicator dot + status badge,
+ *     so a TURN-relay fallback is visible in the UI, not just DevTools.
  *
  * @param {string} targetSocketId — the peer we're connecting to; used for ICE routing
+ * @param {RTCIceServer[]} iceServers — STUN + TURN servers from getIceServers()
  * @returns {RTCPeerConnection}
  */
-function createPeerConnection(targetSocketId) {
+function createPeerConnection(targetSocketId, iceServers) {
     log('info', `Creating RTCPeerConnection — target: ${targetSocketId}`);
+    log('info', `Using ${iceServers.length} ICE server(s): ${iceServers.map(s => s.urls).join(', ')}`);
 
-    const peer = new RTCPeerConnection({
-        iceServers: [
-            // Public STUN — helps on home/office networks without credentials.
-            // Phase 7 will add TURN here for restrictive NATs.
-            { urls: 'stun:stun.l.google.com:19302' },
-            { urls: 'stun:stun1.l.google.com:19302' },
-        ],
-    });
+    const peer = new RTCPeerConnection({ iceServers });
 
-    // ── Add local tracks BEFORE creating offer/answer ──
-    // This is critical: tracks must be added to the connection before
-    // createOffer() so they are included in the SDP negotiation.
-    if (!localStream) {
-        log('error', 'createPeerConnection called before localStream was ready — tracks won\'t be added!');
-    } else {
+    // Add local tracks BEFORE any offer/answer is created, so they're
+    // included in the SDP negotiation.
+    if (localStream) {
         localStream.getTracks().forEach((track) => {
             peer.addTrack(track, localStream);
-            log('info', `Added local track: kind=${track.kind}, id=${track.id.slice(0,8)}`);
         });
+        log('info', `Added ${localStream.getTracks().length} local track(s) to peer connection`);
+    } else {
+        log('warn', 'createPeerConnection(): localStream is null — no tracks added. Call getMedia() first.');
     }
 
-    // ── ICE candidate trickle ──
+    // Trickle ICE — every candidate the browser discovers gets relayed to
+    // the other peer through the Signaling Service immediately.
     peer.onicecandidate = (event) => {
         if (event.candidate) {
-            log('info', `ICE candidate generated — type: ${event.candidate.type || 'host'}, protocol: ${event.candidate.protocol}`);
+            log('info', `Local ICE candidate found (${event.candidate.type || '?'}) — sending to ${targetSocketId}`);
             socket.emit('ice-candidate', {
                 targetSocketId,
                 candidate: event.candidate,
             });
         } else {
-            log('info', 'ICE gathering complete (null candidate)');
+            log('info', 'ICE candidate gathering complete (null candidate marks end-of-candidates)');
         }
     };
 
-    // ── ICE connection state changes ──
-    peer.oniceconnectionstatechange = () => {
-        const state = peer.iceConnectionState;
-        log('info', `ICE connection state → ${state}`);
-
-        // Update the on-screen indicator
-        remoteIceIndicator.className = 'ice-indicator';
-        if (state === 'checking')  remoteIceIndicator.classList.add('checking');
-        if (state === 'connected' || state === 'completed') {
-            remoteIceIndicator.classList.add('connected');
-            setStatus('live', '🔴 LIVE');
-        }
-        if (state === 'failed')    remoteIceIndicator.classList.add('failed');
-        if (state === 'disconnected') {
-            setStatus('connected', 'Peer disconnected');
-            remotePlaceholder.style.display = '';
-            remoteVideo.srcObject = null;
-        }
-    };
-
-    // ── Connection state (broader than ICE) ──
-    peer.onconnectionstatechange = () => {
-        log('info', `RTCPeerConnection state → ${peer.connectionState}`);
-    };
-
-    // ── Signaling state ──
-    peer.onsignalingstatechange = () => {
-        log('info', `Signaling state → ${peer.signalingState}`);
-    };
-
-    // ── T.11 — ontrack: remote media arrives ──
-    // event.streams[0] is the grouped stream (audio + video together) as sent
-    // by the remote peer via addTrack(track, localStream). Using streams[0]
-    // avoids manually reassembling tracks into a new MediaStream.
+    // Remote media arrives here — attach it to the remote <video> element.
     peer.ontrack = (event) => {
-        log('success', `ontrack fired — kind: ${event.track.kind}, streams: ${event.streams.length}`);
-        if (event.streams && event.streams[0]) {
-            remoteVideo.srcObject = event.streams[0];
-            remotePlaceholder.style.display = 'none';
-            log('success', '✅ Remote video stream attached to <video> element');
+        log('success', `ontrack fired — attaching remote stream (${event.streams[0]?.id})`);
+        remoteVideo.srcObject = event.streams[0];
+        remotePlaceholder.style.display = 'none';
+    };
+
+    // Drives the small indicator dot on the remote video card, and flips
+    // the header status badge to "Live" once media is actually flowing.
+    peer.oniceconnectionstatechange = () => {
+        log('info', `iceConnectionState: ${peer.iceConnectionState}`);
+
+        switch (peer.iceConnectionState) {
+            case 'checking':
+                remoteIceIndicator.className = 'ice-indicator checking';
+                break;
+            case 'connected':
+            case 'completed':
+                remoteIceIndicator.className = 'ice-indicator connected';
+                setStatus('live', '🔴 Live');
+                break;
+            case 'failed':
+                remoteIceIndicator.className = 'ice-indicator failed';
+                setStatus('error', 'Connection failed');
+                log('error', 'ICE connection failed — on a restrictive network this usually means TURN relay was needed but unreachable.');
+                break;
+            case 'disconnected':
+                remoteIceIndicator.className = 'ice-indicator';
+                break;
         }
+    };
+
+    peer.onconnectionstatechange = () => {
+        log('info', `connectionState: ${peer.connectionState}`);
     };
 
     return peer;
@@ -349,7 +387,7 @@ function createPeerConnection(targetSocketId) {
 async function startCall(targetSocketId) {
     log('info', `startCall() → creating offer for ${targetSocketId}`);
 
-    pc = createPeerConnection(targetSocketId);
+    pc = createPeerConnection(targetSocketId, cachedIceServers);
 
     try {
         const offer = await pc.createOffer();
@@ -379,7 +417,7 @@ async function startCall(targetSocketId) {
 async function handleOffer(fromSocketId, sdp) {
     log('info', `handleOffer() — creating RTCPeerConnection as callee`);
 
-    pc = createPeerConnection(fromSocketId);
+    pc = createPeerConnection(fromSocketId, cachedIceServers);
 
     try {
         await pc.setRemoteDescription(new RTCSessionDescription(sdp));
@@ -480,6 +518,8 @@ function leaveCall() {
         localStream = null;
     }
 
+    cachedIceServers = null;
+
     localVideo.srcObject = null;
     remoteVideo.srcObject = null;
     localPlaceholder.style.display = '';
@@ -527,10 +567,15 @@ joinBtn.addEventListener('click', async () => {
         // Step 1: camera + mic
         await getMedia();
 
-        // Step 2: socket connection
+        // Step 2: fetch TURN/STUN credentials (Phase 7) — must happen before
+        // any RTCPeerConnection is created, since both startCall() and
+        // handleOffer() read from cachedIceServers.
+        cachedIceServers = await getIceServers(token);
+
+        // Step 3: socket connection
         await connectSocket(token);
 
-        // Step 3: join room — event handlers for the WebRTC flow are registered here
+        // Step 4: join room — event handlers for the WebRTC flow are registered here
         joinRoom(roomCode);
 
     } catch (err) {
@@ -551,7 +596,7 @@ document.getElementById('clearLog').addEventListener('click', () => {
 // ─────────────────────────────────────────────────────────────────────────────
 // STARTUP LOG
 // ─────────────────────────────────────────────────────────────────────────────
-log('info', '=== WebRTC Test Client — Phase 6 ===');
+log('info', '=== WebRTC Test Client — Phase 6 + Phase 7 (TURN/STUN) ===');
 log('info', 'Paste JWT access token + room code, then click "Join Call".');
 log('info', 'Open a second tab with a DIFFERENT user token and the SAME room code.');
 log('warn', 'If getUserMedia() is blocked (file:// restriction), run: npx serve . and use http://localhost:3000');
