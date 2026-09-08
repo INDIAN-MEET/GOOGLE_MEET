@@ -1,9 +1,19 @@
+							
+
 <<<<<<< Updated upstream
 
 # Phase 7 — TURN/STUN (NAT Traversal) — Detailed Build Plan
+
 =======
 ﻿# Phase 7 — TURN/STUN (NAT Traversal) — Detailed Build Plan
+
 >>>>>>> Stashed changes
+>>>>>>>
+>>>>>>
+>>>>>
+>>>>
+>>>
+>>
 
 > **Where you are:** Signaling Service (Phase 5) is fully verified — real SDP offer/answer/ICE relay confirmed working end-to-end on localhost, `RTCPeerConnection state → connected`, video/audio both flowing.
 >
