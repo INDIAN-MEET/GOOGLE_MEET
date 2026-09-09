@@ -1,4 +1,3 @@
-
 # Video Meet App — Phase 8 (Chat Service)
 
 > **Stack for this service (matches every other service's pattern):** TypeScript, ES Modules (`"type": "module"`), Express, **Mongoose** (this is your one non-relational service — no Prisma here), MongoDB, Redis (subscriber only — no publishing from this service), Docker (per-service `Dockerfile` + root `docker-compose.yml` entry).
@@ -242,7 +241,7 @@ GATEWAY_SECRET=replace_with_shared_internal_secret
 AUTH_SERVICE_URL=http://localhost:4001
 ```
 
-`src/config/env.ts`:
+`src/	`:
 
 ```typescript
 import 'dotenv/config';

@@ -92,13 +92,14 @@ services:
   chat-service:
     build: ./services/chat-service
     container_name: chat-service
-    ports:
-      - "4005:4005"
+    restart: unless-stopped
     env_file:
-      - ./services/chat-service/.env
+      - ./services/chat-service/.env.docker
     depends_on:
       - mongo
       - redis
+    ports:
+      - "4005:4005"
   coturn:
     image: coturn/coturn:latest
     container_name: coturn
