@@ -1,5 +1,3 @@
-							
-
 # Video Meet App — Phase 8 (Chat Service)
 
 > **Stack for this service (matches every other service's pattern):** TypeScript, ES Modules (`"type": "module"`), Express, **Mongoose** (this is your one non-relational service — no Prisma here), MongoDB, Redis (subscriber only — no publishing from this service), Docker (per-service `Dockerfile` + root `docker-compose.yml` entry).
@@ -257,7 +255,7 @@ export const AUTH_SERVICE_URL = process.env.AUTH_SERVICE_URL as string;
 
 ---
 
-## 6. Mongoose Connection (`src/config/db.ts`)				
+## 6. Mongoose Connection (`src/config/db.ts`)
 
 This is the direct equivalent of every other service's `db.ts` — connect once, on boot, before the server starts accepting requests.
 
