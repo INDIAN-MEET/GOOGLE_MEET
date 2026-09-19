@@ -16,7 +16,7 @@ router.use(createProxyMiddleware({
 
 // Protected — requires a valid token at the Gateway
 router.use(
-  ['/auth/logout', '/auth/me'],
+  ['/auth/logout', '/auth/me', '/auth/turn-credentials'],
   gatewayAuth,
   createProxyMiddleware({
     target: AUTH_SERVICE_URL,
@@ -28,10 +28,8 @@ router.use(
 
 /**  
  * User Service — entirely protected
- * 
  */
 router.use('/users', gatewayAuth);
-
 
 router.use(createProxyMiddleware({
     target: USER_SERVICE_URL,
@@ -41,15 +39,19 @@ router.use(createProxyMiddleware({
     on: { proxyReq: fixRequestBody },
 }));
 
-// Room Service — entirely protected
-// Room Service — entirely protected
-router.use('/v1/rooms', gatewayAuth);   // pehले: '/rooms'
+/**
+ * Room Service — entirely protected
+ * room-service mounts its routes at '/v1' (app.use('/v1', roomRoutes)),
+ * so its real routes are /v1/rooms, /v1/rooms/:code, etc.
+ * Client calls /api/v1/rooms/* — no rewrite needed, path matches as-is.
+ */
+router.use('/v1/rooms', gatewayAuth);
 
 router.use(createProxyMiddleware({
   target: ROOM_SERVICE_URL,
   changeOrigin: true,
-  pathFilter: '/v1/rooms',              // pehले: '/rooms'
-  pathRewrite: { '^/v1/rooms': '/v1/rooms' },   // koi actual change nahi — as-is forward
+  pathFilter: '/v1/rooms',
+  pathRewrite: { '^/v1/rooms': '/v1/rooms' },
   on: { proxyReq: fixRequestBody },
 }));
 
