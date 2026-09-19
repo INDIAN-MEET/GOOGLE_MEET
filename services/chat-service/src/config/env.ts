@@ -6,3 +6,5 @@ export const REDIS_URL = process.env.REDIS_URL as string;
 export const GATEWAY_SECRET = process.env.GATEWAY_SECRET as string;
 export const AUTH_SERVICE_URL = process.env.AUTH_SERVICE_URL as string;
 export const NODE_ENV = process.env.NODE_ENV || 'development';
+export const JWT_ACCESS_SECRET = process.env.JWT_ACCESS_SECRET as string;
+export const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET as string;
