@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { createProxyMiddleware, fixRequestBody } from 'http-proxy-middleware';
 import { gatewayAuth } from '../middleware/gatewayAuth.js';
-import { AUTH_SERVICE_URL, USER_SERVICE_URL, ROOM_SERVICE_URL } from '../config/env.js';
+import { AUTH_SERVICE_URL, USER_SERVICE_URL, ROOM_SERVICE_URL, CHAT_SERVICE_URL } from '../config/env.js';
 
 const router = Router();
 
@@ -53,5 +53,15 @@ router.use(createProxyMiddleware({
   on: { proxyReq: fixRequestBody },
 }));
 
+// Chat Service — entirely protected
+router.use('/chat', gatewayAuth);
+
+router.use(createProxyMiddleware({
+    target: CHAT_SERVICE_URL,
+    changeOrigin: true,
+    pathFilter: '/chat',
+    pathRewrite: { '^/chat': '/api/v1/chat' },
+    on: { proxyReq: fixRequestBody },
+}));
 
 export default router;
