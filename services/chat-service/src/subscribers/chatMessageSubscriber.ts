@@ -1,7 +1,7 @@
 import { createClient } from 'redis';
-import { REDIS_URL } from '../config/env.js';
-import { ChatMessage } from '../models/ChatMessage.js';
-import logger from '../utils/logger.js';
+import { REDIS_URL } from '../config/env.ts';
+import { ChatMessage } from '../models/ChatMessage.ts';
+import logger from '../utils/logger.ts';
 
 interface ChatMessagePayload {
     roomId: string;

@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
-import { ChatMessage } from '../models/ChatMessage.js';
-import { successResponse } from '../utils/response.js';
-import AppError from '../utils/AppError.js';
+import { ChatMessage } from '../models/ChatMessage.ts';
+import { successResponse } from '../utils/response.ts';
+import AppError from '../utils/AppError.ts';
 
 async function getMessages(req: Request, res: Response, next: NextFunction) {
     try {
