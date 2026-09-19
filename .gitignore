@@ -3,3 +3,4 @@ node_modules/
 dist/
 # Git Auto Commit Generator learned data
 .git-auto-commit/
+.env.docker

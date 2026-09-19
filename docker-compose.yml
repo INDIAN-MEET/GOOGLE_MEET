@@ -38,7 +38,7 @@ services:
     ports:
       - "4000:4000"
     env_file:
-      - ./services/api-gateway/.env
+      - ./services/api-gateway/.env.docker
     depends_on:
       - auth-service
       - user-service
@@ -62,7 +62,7 @@ services:
     ports:
       - "4002:4002"
     env_file:
-      - ./services/user-service/.env
+      - ./services/user-service/.env.docker
     depends_on:
       - postgres
       - redis
@@ -73,7 +73,7 @@ services:
     ports:
       - "4003:4003"
     env_file:
-      - ./services/room-service/.env
+      - ./services/room-service/.env.docker
     depends_on:
       - postgres
       - auth-service
@@ -84,10 +84,10 @@ services:
     ports:
       - "4004:4004"
     env_file:
-      - ./services/signaling-service/.env
+      - ./services/signaling-service/.env.docker
     depends_on:
       - redis
-      - auth-service
+      - room-service
 
   chat-service:
     build: ./services/chat-service
@@ -99,7 +99,13 @@ services:
     depends_on:
       - mongo
       - redis
-
+  coturn:
+    image: coturn/coturn:latest
+    container_name: coturn
+    restart: unless-stopped
+    network_mode: host
+    volumes:
+      - ./infra/coturn/turnserver.conf:/etc/coturn/turnserver.conf
 volumes:
   postgres_data:
   mongo_data:
