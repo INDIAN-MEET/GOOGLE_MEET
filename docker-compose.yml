@@ -1,6 +1,7 @@
-
 services:
-  # ---------- Infra ----------
+  # ==========================================================================
+  # INFRA — databases & cache
+  # ==========================================================================
   postgres:
     image: postgres:16-alpine
     container_name: postgres
@@ -31,10 +32,13 @@ services:
     ports:
       - "6379:6379"
 
-  # ---------- Services (placeholders for now) ----------
+  # ==========================================================================
+  # APPLICATION SERVICES
+  # ==========================================================================
   api-gateway:
     build: ./services/api-gateway
     container_name: api-gateway
+    restart: unless-stopped
     ports:
       - "4000:4000"
     env_file:
@@ -48,6 +52,7 @@ services:
   auth-service:
     build: ./services/auth-service
     container_name: auth-service
+    restart: unless-stopped
     ports:
       - "4001:4001"
     env_file:
@@ -59,6 +64,7 @@ services:
   user-service:
     build: ./services/user-service
     container_name: user-service
+    restart: unless-stopped
     ports:
       - "4002:4002"
     env_file:
@@ -70,6 +76,7 @@ services:
   room-service:
     build: ./services/room-service
     container_name: room-service
+    restart: unless-stopped
     ports:
       - "4003:4003"
     env_file:
@@ -81,6 +88,7 @@ services:
   signaling-service:
     build: ./services/signaling-service
     container_name: signaling-service
+    restart: unless-stopped
     ports:
       - "4004:4004"
     env_file:
@@ -93,13 +101,17 @@ services:
     build: ./services/chat-service
     container_name: chat-service
     restart: unless-stopped
+    ports:
+      - "4005:4005"
     env_file:
       - ./services/chat-service/.env.docker
     depends_on:
       - mongo
       - redis
-    ports:
-      - "4005:4005"
+
+  # ==========================================================================
+  # NAT TRAVERSAL — STUN/TURN (Phase 7)
+  # ==========================================================================
   coturn:
     image: coturn/coturn:latest
     container_name: coturn
@@ -107,6 +119,7 @@ services:
     network_mode: host
     volumes:
       - ./infra/coturn/turnserver.conf:/etc/coturn/turnserver.conf
+
 volumes:
   postgres_data:
   mongo_data:
