@@ -1,83 +1,117 @@
+﻿# signaling-service
 
-# Signaling Service
+**Port:** 4004 | **Database:** None (Redis for live presence only)
 
-**Port:** 4004
-**Database:** none (stateless HTTP/WS layer) — uses **Redis** for live, in-memory presence only
-**Protocol:** WebSocket (Socket.io), not REST
+WebRTC signaling server built on Socket.io. Clients connect directly via WebSocket (this service is **not** proxied through the API Gateway). Authenticates connections via JWT on the WebSocket handshake, verifies the room is active by calling room-service over HTTP, then relays WebRTC offer/answer/ICE-candidate messages between peers.
 
-## What this service does
+---
 
-- Lets two or more browsers already in the *same room* find each other and exchange
-  WebRTC connection info (`offer`, `answer`, `ice-candidate`) in real time
-- Verifies the JWT on every socket connection, locally — same pattern as
-  Room/User Service's copied `authGuard`, just adapted for a socket handshake
-  instead of an Express request
-- Confirms the room is real and active by calling **Room Service** over HTTP
-  before letting a socket join — this is the one real service-to-service
-  network call in this service
-- Tracks *who is currently connected* to which room using a Redis **set**
-  (`room:{roomId}:members`) — this is live presence, separate from Room
-  Service's `RoomParticipant` table (which tracks join/leave history, not
-  live sockets)
-- Does **not** touch video/audio itself. It only relays small JSON messages
-  between browsers so they can set up a **direct peer-to-peer** connection.
-  Once that connection is up, video/audio never passes through this service.
+## What it does
 
-## Talks to
+- Authenticates the WebSocket connection by verifying the JWT locally (`socketAuth` middleware).
+- On `join-room`, calls room-service (`GET /v1/rooms/:code`) to verify the room is active, then adds the socket to a Redis set (`room:<code>:members`) and to a Socket.io room.
+- Relays `offer`, `answer`, and `ice-candidate` events between peers by forwarding the payload to the target socket ID.
+- On `leave-room` or `disconnect`, removes the socket from the Redis members set and emits `peer-left` to the room.
 
-- **Room Service** (`GET /rooms/:code`) — one HTTP call per `join-room` event,
-  to confirm the room exists and is active
-- **Redis** — presence sets only (`SADD`/`SREM`/`SMEMBERS` on
-  `room:{roomId}:members`); no Pub/Sub in this phase
-- **Browsers**, directly, over WebSocket — this is the part that's different
-  from every other service so far, which only spoke plain REST
+---
 
-## Why this service exists at all
+## Socket.io Events
 
-Two browsers can't just "find" each other on the internet — WebRTC needs a
-third party to introduce them first (exchange IP/port candidates and media
-capabilities), then gets out of the way. That introduction step is called
-**signaling**, and it's this service's entire job. Nothing here is
-WebRTC-specific magic; it's a plain relay of JSON messages over a
-socket that happens to carry `offer`/`answer`/`ice-candidate` payloads.
+### Client → Server
 
-## Events (not REST routes)
+| Event | Payload | What happens |
+|---|---|---|
+| `join-room` | `{ roomCode: string }` | Verifies room via room-service; adds to Redis set + Socket.io room; emits `joined` back and `peer-joined` to existing peers |
+| `offer` | `{ targetSocketId: string, sdp: any }` | Forwarded to `targetSocketId` with `fromSocketId` added |
+| `answer` | `{ targetSocketId: string, sdp: any }` | Forwarded to `targetSocketId` with `fromSocketId` added |
+| `ice-candidate` | `{ targetSocketId: string, candidate: any }` | Forwarded to `targetSocketId` with `fromSocketId` added |
+| `leave-room` | — | Removes from Redis set; emits `peer-left` to room |
+| `disconnect` | — | Same cleanup as `leave-room` |
 
-| Direction         | Event             | Payload                           | What happens                                                               |
-| ----------------- | ----------------- | --------------------------------- | -------------------------------------------------------------------------- |
-| Client → Server  | `join-room`     | `{ roomCode }`                  | Validates room via Room Service, adds socket to Redis set, notifies others |
-| Server → Clients | `peer-joined`   | `{ socketId, userId }`          | Sent to existing members when someone new joins                            |
-| Client → Server  | `offer`         | `{ targetSocketId, sdp }`       | Relayed untouched to the target socket                                     |
-| Client → Server  | `answer`        | `{ targetSocketId, sdp }`       | Relayed untouched to the target socket                                     |
-| Client → Server  | `ice-candidate` | `{ targetSocketId, candidate }` | Relayed untouched to the target socket                                     |
-| Client → Server  | `leave-room`    | `{ roomCode }`                  | Removes socket from Redis set, notifies remaining members                  |
-| Server → Clients | `peer-left`     | `{ socketId }`                  | Sent when a member disconnects or leaves                                   |
-| (internal)        | `disconnect`    | —                                | Same cleanup as`leave-room`, for ungraceful exits (tab closed, etc.)     |
+### Server → Client
 
-## Running with Docker
+| Event | Payload | When |
+|---|---|---|
+| `joined` | `{ existingMembers: string[] }` | After successful `join-room`; members are socket IDs |
+| `peer-joined` | `{ socketId: string, userId: string }` | Broadcast to existing room members when a new peer joins |
+| `peer-left` | `{ socketId: string }` | Broadcast when a peer leaves or disconnects |
+| `join-error` | `string` (error message) | If room not found or inactive |
+| `offer` | `{ fromSocketId: string, ...rest }` | Relayed offer from another peer |
+| `answer` | `{ fromSocketId: string, ...rest }` | Relayed answer from another peer |
+| `ice-candidate` | `{ fromSocketId: string, ...rest }` | Relayed ICE candidate from another peer |
 
-1. Make sure `.env.docker` is filled in with real values (not committed to git).
-2. From the project root, run:
-   ```bash
-   docker compose up --build
-   ```
-3. The service will be available at `ws://localhost:4004` (Socket.io endpoint,
-   not a browsable HTTP route — use a Socket.io client to connect).
+---
 
-To stop:
+## Authentication
 
-```bash
-docker compose down
+`socketAuth` middleware (runs on every connection before any handler):
+```
+token = socket.handshake.auth.token || socket.handshake.query.token
+jwt.verify(token, JWT_ACCESS_SECRET)
+→ socket.data.userId, socket.data.token
 ```
 
-## Environment Variables
+---
 
-See `.env.example` for the full list. Required variables:
+## Redis usage (presence only)
 
-- `PORT` — port the service runs on (default: 4004)
-- `REDIS_URL` — Redis connection string (presence sets)
-- `JWT_ACCESS_SECRET` — must match Auth Service's exactly, used to verify
-  tokens locally on socket handshake
-- `ROOM_SERVICE_URL` — base URL for Room Service (e.g.
-  `http://room-service:4003` inside Docker, `http://localhost:4003` locally)
-- `NODE_ENV` — `development` | `production`
+| Key pattern | Type | Operation | When |
+|---|---|---|---|
+| `room:<code>:members` | Set | `SADD <socketId>` | On `join-room` |
+| `room:<code>:members` | Set | `SMEMBERS` | On `join-room` (to get existing members) |
+| `room:<code>:members` | Set | `SREM <socketId>` | On `leave-room` / disconnect |
+
+> This Redis data is ephemeral — it tracks live socket IDs, not persistent data. If the service restarts, the sets are effectively stale until members reconnect.
+
+---
+
+## Chat message publishing (Redis pub/sub)
+
+> **TODO:** `signaling-service` uses `ioredis` for the presence sets above, but the `chat-message` channel publish (consumed by chat-service) is not implemented in the current `signaling-service` handlers. The `relay.ts` handlers only forward WebRTC signaling. If text chat is sent via WebSocket, the publisher for `chat-message` needs to be added here.
+
+---
+
+## Environment variables
+
+Source: `.env.example` / `.env.docker`
+
+| Variable | Example | Required |
+|---|---|---|
+| `PORT` | `4004` | ✅ |
+| `JWT_ACCESS_SECRET` | `(same as auth-service)` | ✅ |
+| `REDIS_URL` | `redis://localhost:6379` | ✅ |
+| `ROOM_SERVICE_URL` | `http://localhost:4003` | ✅ |
+| `NODE_ENV` | `development` | ✅ |
+
+---
+
+## Run locally
+
+```bash
+npm install
+npm run dev   # tsx watch server.ts — :4004
+```
+
+## Test
+
+```js
+// Browser console or Node.js client
+import { io } from 'socket.io-client';
+
+const socket = io('http://localhost:4004', {
+  auth: { token: '<accessToken>' }
+});
+
+socket.on('connect', () => {
+  socket.emit('join-room', { roomCode: 'abc-defg-hij' });
+});
+
+socket.on('joined', ({ existingMembers }) => {
+  console.log('Joined room, existing members:', existingMembers);
+});
+
+socket.on('peer-joined', ({ socketId, userId }) => {
+  console.log('New peer:', socketId, userId);
+  // Begin WebRTC negotiation: create offer → send 'offer' event
+});
+```
