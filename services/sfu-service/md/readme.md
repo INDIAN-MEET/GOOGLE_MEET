@@ -19,21 +19,21 @@ When a 4th or 5th user joins a Mesh call, **every user must send their video to 
 
 ```mermaid
 flowchart TD
-    subgraph Mesh Topology (4 Users = 12 Video Connections)
-        U1[User 1] <--> U2[User 2]
-        U1 <--> U3[User 3]
-        U1 <--> U4[User 4]
-        U2 <--> U3[User 3]
-        U2 <--> U4[User 4]
-        U3 <--> U4[User 4]
+    subgraph Mesh["Mesh Topology (4 Users = 12 Connections)"]
+        U1["User 1"] <--> U2["User 2"]
+        U1 <--> U3["User 3"]
+        U1 <--> U4["User 4"]
+        U2 <--> U3["User 3"]
+        U2 <--> U4["User 4"]
+        U3 <--> U4["User 4"]
     end
 ```
 
-| Participants ($N$) | Connections per User | Total Uploads per User |      Client CPU & Bandwidth Load      |
-| :------------------: | :------------------: | :--------------------: | :------------------------------------: |
-|     **2**     |          1          |           1           |               🟢 Minimal               |
-|     **4**     |          3          |           3           |     🟡 High CPU & 720p Upload Lag     |
-|     **8**     |          7          |           7           | 🔴**Browser Crash / Severe Lag** |
+| Participants ($N$) | Connections per User | Total Uploads per User | Client CPU & Bandwidth Load |
+| :---: | :---: | :---: | :---: |
+| **2** | 1 | 1 | 🟢 Minimal |
+| **4** | 3 | 3 | 🟡 High CPU & 720p Upload Lag |
+| **8** | 7 | 7 | 🔴 **Browser Crash / Severe Lag** |
 
 ---
 
@@ -46,10 +46,10 @@ An **SFU (Selective Forwarding Unit)** acts as a central intelligent WebRTC medi
 
 ```mermaid
 flowchart TB
-    U1["User 1<br/>(Uploads 1 Stream)"] -->|"1 Upload"| SFU["SFU Server<br/>(Mediasoup Router)"]
-    U2["User 2<br/>(Uploads 1 Stream)"] -->|"1 Upload"| SFU
-    U3["User 3<br/>(Uploads 1 Stream)"] -->|"1 Upload"| SFU
-    U4["User 4<br/>(Uploads 1 Stream)"] -->|"1 Upload"| SFU
+    U1["User 1 - Uploads 1 Stream"] -->|"1 Upload"| SFU["SFU Server (Mediasoup Router)"]
+    U2["User 2 - Uploads 1 Stream"] -->|"1 Upload"| SFU
+    U3["User 3 - Uploads 1 Stream"] -->|"1 Upload"| SFU
+    U4["User 4 - Uploads 1 Stream"] -->|"1 Upload"| SFU
 
     SFU -->|"3 Downloads"| U1
     SFU -->|"3 Downloads"| U2
@@ -67,12 +67,12 @@ Mediasoup uses specific WebRTC abstractions:
 
 ```mermaid
 flowchart TD
-    Worker["1. Mediasoup Worker<br/>(C++ Subprocess per CPU core)"]
-    Router["2. Mediasoup Router<br/>(Virtual Audio/Video Room)"]
-    SendTransport["3a. Send WebRtcTransport<br/>(For uploading media)"]
-    RecvTransport["3b. Receive WebRtcTransport<br/>(For downloading media)"]
-    Producer["4. Producer<br/>(Outgoing Audio/Video Track from client)"]
-    Consumer["5. Consumer<br/>(Incoming Audio/Video Track to client)"]
+    Worker["1. Mediasoup Worker (C++ Subprocess per CPU core)"]
+    Router["2. Mediasoup Router (Virtual Room Switch)"]
+    SendTransport["3a. Send WebRtcTransport (Uploading media)"]
+    RecvTransport["3b. Receive WebRtcTransport (Downloading media)"]
+    Producer["4. Producer (Outgoing Audio/Video Track)"]
+    Consumer["5. Consumer (Incoming Audio/Video Track)"]
 
     Worker --> Router
     Router --> SendTransport
@@ -103,10 +103,10 @@ flowchart TD
 ```mermaid
 sequenceDiagram
     autonumber
-    actor Client as Browser Client
-    participant Sig as Signaling Service (Socket.io)
-    participant SFU as SFU Service (HTTP / REST)
-    participant MS as Mediasoup Router (C++)
+    actor Client as "Browser Client"
+    participant Sig as "Signaling Service (Socket.io)"
+    participant SFU as "SFU Service (HTTP / REST)"
+    participant MS as "Mediasoup Router (C++)"
 
     Note over Client, MS: Step 1: Join & Query Router Capabilities
     Client->>Sig: join-room { roomId }
@@ -130,7 +130,7 @@ sequenceDiagram
     Client->>Sig: connect-transport { transportId, dtlsParameters }
     Sig->>SFU: POST /api/v1/sfu/transports/connect
     SFU->>MS: transport.connect({ dtlsParameters })
-  
+    
     Client->>Sig: produce { transportId, kind: 'video', rtpParameters }
     Sig->>SFU: POST /api/v1/sfu/produce
     SFU->>MS: transport.produce({ kind, rtpParameters })
@@ -192,16 +192,16 @@ services/
 
 ## Part E — Step-by-Step Build & Verification Checklist
 
-|    Step    | Action                            | Description                                                                                            | Verification Checkpoint                                    |
-| :---------: | :-------------------------------- | :----------------------------------------------------------------------------------------------------- | :--------------------------------------------------------- |
-| **1** | **Branch & Skeleton**       | Create`phase-9-sfu-service` branch and `sfu-service` directory structure.                          | `git status` shows clean branch `phase-9-sfu-service`. |
-| **2** | **Docker & Config**         | Add`sfu-service` to `docker-compose.yml` (Port 4006) with RTC port ranges (`40000-49999/udp`).   | `docker-compose config` succeeds with no syntax errors.  |
-| **3** | **Package & Mediasoup**     | Setup`package.json` with `mediasoup`, `express`, `dotenv`, `pino`, `jsonwebtoken`.         | `npm install` completes cleanly.                         |
-| **4** | **Mediasoup Config**        | Define Worker & Router Codecs (`VP8`, `H264`, `Opus`) in `src/config/mediasoup.ts`.            | Code compiles with TypeScript without errors.              |
-| **5** | **Worker & Room Manager**   | Implement`workerPool.ts` (worker lifecycle) and `roomManager.ts` (router creation per `roomId`). | Service starts and logs`Mediasoup Worker created`.       |
-| **6** | **Transport & Produce API** | Implement`/transports` and `/produce` endpoints for SFU ingress.                                   | `POST /transports` returns ICE/DTLS parameters.          |
-| **7** | **Consume API**             | Implement`/consume` and `/consumer/resume` endpoints for SFU egress forwarding.                    | `POST /consume` creates valid consumer parameters.       |
-| **8** | **Integration**             | Rebuild`sfu-service` container in Docker Compose and run health/API verification tests.              | `GET /health` returns `{ status: "ok" }`.              |
+| Step | Action | Description | Verification Checkpoint |
+| :---: | :--- | :--- | :--- |
+| **1** | **Branch & Skeleton** | Create `phase-9-sfu-service` branch and `sfu-service` directory structure. | `git status` shows clean branch `phase-9-sfu-service`. |
+| **2** | **Docker & Config** | Add `sfu-service` to `docker-compose.yml` (Port 4006) with RTC port ranges (`40000-49999/udp`). | `docker-compose config` succeeds with no syntax errors. |
+| **3** | **Package & Mediasoup** | Setup `package.json` with `mediasoup`, `express`, `dotenv`, `pino`, `jsonwebtoken`. | `npm install` completes cleanly. |
+| **4** | **Mediasoup Config** | Define Worker & Router Codecs (`VP8`, `H264`, `Opus`) in `src/config/mediasoup.ts`. | Code compiles with TypeScript without errors. |
+| **5** | **Worker & Room Manager** | Implement `workerPool.ts` (worker lifecycle) and `roomManager.ts` (router creation per `roomId`). | Service starts and logs `Mediasoup Worker created`. |
+| **6** | **Transport & Produce API** | Implement `/transports` and `/produce` endpoints for SFU ingress. | `POST /transports` returns ICE/DTLS parameters. |
+| **7** | **Consume API** | Implement `/consume` and `/consumer/resume` endpoints for SFU egress forwarding. | `POST /consume` creates valid consumer parameters. |
+| **8** | **Integration** | Rebuild `sfu-service` container in Docker Compose and run health/API verification tests. | `GET /health` returns `{ status: "ok" }`. |
 
 ---
 
