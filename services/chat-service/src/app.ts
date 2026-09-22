@@ -1,4 +1,5 @@
-import express, { Request, Response } from 'express';
+import express from 'express';
+import type { Request, Response } from 'express';
 import pinoHttp from 'pino-http';
 import { errorHandler } from './middleware/errorHandler.ts';
 import logger from './utils/logger.ts';

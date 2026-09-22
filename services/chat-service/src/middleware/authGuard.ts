@@ -1,4 +1,4 @@
-import { Request, Response, NextFunction } from 'express';
+import type { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { JWT_ACCESS_SECRET } from '../config/env.js';
 import AppError from '../utils/AppError.js';

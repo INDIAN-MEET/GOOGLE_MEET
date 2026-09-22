@@ -1,4 +1,4 @@
-import { Request, Response, NextFunction } from 'express';
+import type { Request, Response, NextFunction } from 'express';
 import { ChatMessage } from '../models/ChatMessage.ts';
 import { successResponse } from '../utils/response.ts';
 import AppError from '../utils/AppError.ts';
