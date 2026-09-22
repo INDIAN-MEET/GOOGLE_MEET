@@ -11,10 +11,13 @@ export const authGuard = (req: Request, res: Response, next: NextFunction) => {
   }
 
   const token = authHeader.split(' ')[1];
+  if (!token) {
+    return next(new AppError('No token provided', 401));
+  }
 
   try {
-    const decoded = jwt.verify(token, JWT_ACCESS_SECRET);
-    req.userId = (decoded as { userId: string }).userId;
+    const decoded = jwt.verify(token, JWT_ACCESS_SECRET) as { userId: string };
+    req.userId = decoded.userId;
     next();
   } catch (err: any) {
     return next(new AppError('Invalid or expired token', 401));

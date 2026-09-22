@@ -40,11 +40,16 @@ export const startChatMessageSubscriber = async (): Promise<void> => {
             });
 
             logger.info(`[chat-subscriber] Persisted message for room ${payload.roomId}`);
-        } catch (err:any) {
+        } catch (err: any) {
             // Deliberately swallow-and-log, not throw: a bad message must never
             // crash the subscriber loop and take down persistence for every
             // other room's messages.
-            logger.error('[chat-subscriber] Failed to persist message', err);
+            logger.error({
+                msg: '[chat-subscriber] Failed to persist message',
+                error: err?.message ?? String(err),
+                stack: err?.stack,
+                rawMessage,
+            });
         }
     });
 

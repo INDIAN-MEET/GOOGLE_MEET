@@ -6,12 +6,12 @@ import AppError from '../utils/AppError.ts';
 async function getMessages(req: Request, res: Response, next: NextFunction) {
     try {
         const { roomId } = req.params;
-        const limit = Math.min(Number(req.query.limit) || 50, 200);
+        const limit = Math.min(Number(req.query['limit']) || 50, 200);
 
-        const messages = await ChatMessage.find({ roomId })
+        const messages = await ChatMessage.find({ roomId: roomId as string })
             .sort({ createdAt: 1 })
             .limit(limit)
-            .lean()
+            .lean();
 
         successResponse(res, { messages });
 
@@ -20,4 +20,4 @@ async function getMessages(req: Request, res: Response, next: NextFunction) {
     }
 }
 
-export default getMessages
+export default getMessages;

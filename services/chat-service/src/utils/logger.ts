@@ -3,18 +3,20 @@ import { NODE_ENV } from '../config/env.js';
 
 const isDevelopment = NODE_ENV !== 'production';
 
-const logger = pino({
-    level: isDevelopment ? 'debug' : 'info',
-    transport: isDevelopment
+const logger = pino(
+    isDevelopment
         ? {
-              target: 'pino-pretty',
-              options: {
-                  colorize: true,
-                  translateTime: 'SYS:standard',
-                  ignore: 'pid,hostname'
-              }
+              level: 'debug',
+              transport: {
+                  target: 'pino-pretty',
+                  options: {
+                      colorize: true,
+                      translateTime: 'SYS:standard',
+                      ignore: 'pid,hostname',
+                  },
+              },
           }
-        : undefined
-});
+        : { level: 'info' }
+);
 
 export default logger;
