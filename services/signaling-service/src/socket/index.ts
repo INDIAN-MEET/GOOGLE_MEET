@@ -3,6 +3,7 @@ import { socketAuth } from '../middleware/socketAuth.js';
 import { registerJoinRoom } from '../handlers/joinRoom.js';
 import { registerRelayHandlers } from '../handlers/relay.js';
 import { registerLeaveRoom } from '../handlers/leaveRoom.js';
+import { registerChatMessage } from '../handlers/chatMessage.js';
 import logger from '../utils/logger.js';
 
 
@@ -20,6 +21,7 @@ export function initSocket(io: Server) {
         registerJoinRoom(socket)
         registerRelayHandlers(io, socket)
         registerLeaveRoom(socket)
+        registerChatMessage(io, socket)   // ← chat relay + Redis publish
     })
 
 }
