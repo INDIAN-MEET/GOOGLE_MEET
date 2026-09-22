@@ -56,13 +56,13 @@ router.use(createProxyMiddleware({
 }));
 
 // Chat Service — entirely protected
-router.use('/chat', gatewayAuth);
+router.use('/v1/chat', gatewayAuth);
 
 router.use(createProxyMiddleware({
     target: CHAT_SERVICE_URL,
     changeOrigin: true,
-    pathFilter: '/chat',
-    pathRewrite: { '^/chat': '/api/v1/chat' },
+    pathFilter: '/v1/chat',
+    pathRewrite: { '^/v1/chat': '/api/v1/chat' },
     on: { proxyReq: fixRequestBody },
 }));
 
