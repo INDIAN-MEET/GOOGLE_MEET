@@ -1,0 +1,30 @@
+{
+  "dependencies": {
+    "dotenv": "^18.0.3",
+    "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.3",
+    "mediasoup": "^3.27.1",
+    "pino": "^10.3.1"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/node": "^26.6.2",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2"
+  },
+  "name": "sfu-service",
+  "version": "1.0.0",
+  "description": "**Port:** 4006 (Planned) | **Engine:** Mediasoup v3 (Node.js & C++ WebRTC Engine)   **Status:** ⏳ Phase 9 Pending Implementation",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "tsx watch server.ts",
+    "build": "tsc",
+    "start": "node dist/server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module"
+}
