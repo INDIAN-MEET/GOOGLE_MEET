@@ -42,7 +42,7 @@ const listenInfos: mediasoup.types.TransportListenInfo[] = [
 
 export const mediasoupConfig = {
   numWorkers: env.numWorkers,
-  worker: workerSettings,
+  worker: workerSetting,
   router: { mediaCodecs },
   webRtcTransport: {
     listenInfos,
