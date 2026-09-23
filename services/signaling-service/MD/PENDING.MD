@@ -1,6 +1,9 @@
-Chalo poora Signaling Service ka core build karte hain — ek-ek step, poora samajh ke. Ye lamba jayega, but end tak poori service samajh mein aa jayegi.
+# Signaling Service Implementation Checklist & Guide
+
+> **Status:** ✅ **COMPLETED** (All steps D.5 through D.12 have been implemented and verified).
 
 ---
+
 
 # D.5 — `src/config/redis.ts` (Presence Tracking Client)
 
