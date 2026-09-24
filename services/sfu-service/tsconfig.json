@@ -3,38 +3,18 @@
     "target": "ES2022",
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
-
     "rootDir": ".",
     "outDir": "dist",
-
     "types": ["node"],
     "lib": ["ES2022"],
-
     "strict": true,
-    "esModuleInterop": true,
-    "verbatimModuleSyntax": true,
-    "isolatedModules": true,
-
-    "allowImportingTsExtensions": true,
-
-    "noEmit": true,
-
-    "sourceMap": true,
-    "declaration": false,
-    "declarationMap": false,
-
     "noUncheckedIndexedAccess": true,
-    "exactOptionalPropertyTypes": true,
-
+    "esModuleInterop": true,
     "skipLibCheck": true,
-    "noUncheckedSideEffectImports": true,
-    "moduleDetection": "force"
+    "sourceMap": true,
+    "allowImportingTsExtensions": true,
+    "rewriteRelativeImportExtensions": true
   },
-  "include": [
-    "**/*.ts"
-  ],
-  "exclude": [
-    "node_modules",
-    "dist"
-  ]
+  "include": ["server.ts", "src/**/*.ts"],
+  "exclude": ["node_modules", "dist"]
 }
