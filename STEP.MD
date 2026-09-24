@@ -1,31 +1,31 @@
 # Video Meet App — Detailed File-by-File Build Steps & Execution Checklist
 
-> **Current Implementation Status:** Phases 0 through 8 are **✅ COMPLETED**.  
+> **Current Implementation Status:** Phases 0 through 8 are **✅ COMPLETED**.
 > Phases 9 through 16 are **⏳ NEXT / PENDING**.
 
 ---
 
 ## 📌 Implementation Status Dashboard
 
-| Phase | Service / Component | Status | Details & Verification |
-| :--- | :--- | :---: | :--- |
-| **Phase 0** | **Infra Skeleton** | ✅ COMPLETED | Docker Compose, Postgres (`auth_db`, `user_db`, `room_db`), Mongo (`chat_db`), Redis (`6379`). |
-| **Phase 1** | **API Gateway** | ✅ COMPLETED | Port 4000. Express, `http-proxy-middleware`, `gatewayAuth` JWT validation, CORS & Helmet. |
-| **Phase 2** | **Auth Service** | ✅ COMPLETED | Port 4001. Postgres, Prisma, bcrypt, JWT access/refresh tokens, HMAC TURN secret generator. |
-| **Phase 3** | **User Service** | ✅ COMPLETED | Port 4002. Postgres, Prisma, Redis subscriber for `user-created` auto-profile creation. |
-| **Phase 4** | **Room Service** | ✅ COMPLETED | Port 4003. Postgres, Prisma, NanoID room codes, host/participant creation & room teardown. |
-| **Phase 5** | **Signaling Service**| ✅ COMPLETED | Port 4004. Socket.io, Redis presence set tracking, WebRTC offer/answer/ICE candidate relay. |
-| **Phase 6** | **WebRTC Verification**| ✅ COMPLETED | `test-client/` standalone client for 1:1 video/audio WebRTC call verification. |
-| **Phase 7** | **TURN/STUN** | ✅ COMPLETED | Coturn container (`infra/coturn/turnserver.conf`) & HMAC credentials endpoint. |
-| **Phase 8** | **Chat Service** | ✅ COMPLETED | Port 4005. MongoDB Mongoose schema, Redis subscriber to `chat-message`, history REST API. |
-| **Phase 9** | **SFU Service** | ⏳ PENDING | Folder created (`services/sfu-service`); needs `mediasoup` workers for group calls. |
-| **Phase 10**| **Recording Service** | ⏳ PENDING | FFmpeg + BullMQ worker queue for async video call recordings. |
-| **Phase 11**| **Notification Service**| ⏳ PENDING | Nodemailer / email worker for scheduled invites & meeting reminders. |
-| **Phase 12**| **Gateway Hardening** | ⏳ PENDING | Rate limiting (`express-rate-limit`) & centralized error handler validation. |
-| **Phase 13**| **Observability** | ⏳ PENDING | Prometheus `/metrics`, Grafana dashboards & OpenTelemetry tracing. |
-| **Phase 14**| **CI/CD** | ⏳ PENDING | GitHub Actions automated workflows for linting, testing, and Docker builds. |
-| **Phase 15**| **Kubernetes (K8s)**| ⏳ PENDING | K8s deployments, ingress routing, HPA for signaling/SFU, Coturn StatefulSet. |
-| **Phase 16**| **Load Testing** | ⏳ PENDING | Artillery load tests & PgBouncer database connection pooling. |
+| Phase              | Service / Component            |    Status    | Details & Verification                                                                                   |
+| :----------------- | :----------------------------- | :----------: | :------------------------------------------------------------------------------------------------------- |
+| **Phase 0**  | **Infra Skeleton**       | ✅ COMPLETED | Docker Compose, Postgres (`auth_db`, `user_db`, `room_db`), Mongo (`chat_db`), Redis (`6379`). |
+| **Phase 1**  | **API Gateway**          | ✅ COMPLETED | Port 4000. Express,`http-proxy-middleware`, `gatewayAuth` JWT validation, CORS & Helmet.             |
+| **Phase 2**  | **Auth Service**         | ✅ COMPLETED | Port 4001. Postgres, Prisma, bcrypt, JWT access/refresh tokens, HMAC TURN secret generator.              |
+| **Phase 3**  | **User Service**         | ✅ COMPLETED | Port 4002. Postgres, Prisma, Redis subscriber for`user-created` auto-profile creation.                 |
+| **Phase 4**  | **Room Service**         | ✅ COMPLETED | Port 4003. Postgres, Prisma, NanoID room codes, host/participant creation & room teardown.               |
+| **Phase 5**  | **Signaling Service**    | ✅ COMPLETED | Port 4004. Socket.io, Redis presence set tracking, WebRTC offer/answer/ICE candidate relay.              |
+| **Phase 6**  | **WebRTC Verification**  | ✅ COMPLETED | `test-client/` standalone client for 1:1 video/audio WebRTC call verification.                         |
+| **Phase 7**  | **TURN/STUN**            | ✅ COMPLETED | Coturn container (`infra/coturn/turnserver.conf`) & HMAC credentials endpoint.                         |
+| **Phase 8**  | **Chat Service**         | ✅ COMPLETED | Port 4005. MongoDB Mongoose schema, Redis subscriber to`chat-message`, history REST API.               |
+| **Phase 9**  | **SFU Service**          |  ⏳ PENDING  | Folder created (`services/sfu-service`); needs `mediasoup` workers for group calls.                  |
+| **Phase 10** | **Recording Service**    |  ⏳ PENDING  | FFmpeg + BullMQ worker queue for async video call recordings.                                            |
+| **Phase 11** | **Notification Service** |  ⏳ PENDING  | Nodemailer / email worker for scheduled invites & meeting reminders.                                     |
+| **Phase 12** | **Gateway Hardening**    |  ⏳ PENDING  | Rate limiting (`express-rate-limit`) & centralized error handler validation.                           |
+| **Phase 13** | **Observability**        |  ⏳ PENDING  | Prometheus`/metrics`, Grafana dashboards & OpenTelemetry tracing.                                      |
+| **Phase 14** | **CI/CD**                |  ⏳ PENDING  | GitHub Actions automated workflows for linting, testing, and Docker builds.                              |
+| **Phase 15** | **Kubernetes (K8s)**     |  ⏳ PENDING  | K8s deployments, ingress routing, HPA for signaling/SFU, Coturn StatefulSet.                             |
+| **Phase 16** | **Load Testing**         |  ⏳ PENDING  | Artillery load tests & PgBouncer database connection pooling.                                            |
 
 ---
 
@@ -47,14 +47,14 @@
 - [Phase 13 — Observability [⏳ PENDING]](#phase-13--observability--pending)
 - [Phase 14 — CI/CD [⏳ PENDING]](#phase-14--cicd--pending)
 - [Phase 15 — Kubernetes Deployment [⏳ PENDING]](#phase-15--kubernetes-deployment--pending)
-- [Phase 16 — Load Testing & Security [⏳ PENDING]](#phase-16--load-testing--security--pending)
+- [Phase 16 — Load Testing &amp; Security [⏳ PENDING]](#phase-16--load-testing--security--pending)
 - [Full Build Order — Architectural Diagram](#full-build-order--architectural-diagram)
 
 ---
 
 ## Phase 0 — Infra Skeleton [✅ COMPLETED]
 
-**Goal:** Empty services that boot, connected to real databases, before any actual feature exists.  
+**Goal:** Empty services that boot, connected to real databases, before any actual feature exists.
 **Tech:** Docker Compose, Node.js 20, Express, Postgres, MongoDB, Redis.
 
 ```mermaid
@@ -67,6 +67,7 @@ flowchart TD
 ```
 
 ### Verification & Deliverable
+
 - `docker-compose.yml` configures Postgres (`auth_db`, `user_db`, `room_db`), MongoDB (`chat_db`), Redis (`6379`), Coturn (`3478`), and service containers.
 - All microservices expose a `/health` REST endpoint returning `{ status: "ok" }`.
 
@@ -74,7 +75,7 @@ flowchart TD
 
 ## Phase 1 — API Gateway [✅ COMPLETED]
 
-**Goal:** Central entry point forwarding client HTTP requests to appropriate backend services.  
+**Goal:** Central entry point forwarding client HTTP requests to appropriate backend services.
 **Tech:** Express, TypeScript, `http-proxy-middleware`, CORS, Helmet, Pino.
 
 ```mermaid
@@ -85,6 +86,7 @@ flowchart TD
 ```
 
 ### Verification & Deliverable
+
 - Running on Port `4000`.
 - Proxies `/api/auth/*` → Auth Service (`4001`)
 - Proxies `/api/users/*` → User Service (`4002`)
@@ -96,7 +98,7 @@ flowchart TD
 
 ## Phase 2 — Auth Service [✅ COMPLETED]
 
-**Goal:** Real signup/login with hashed passwords and JWTs, backed by Postgres.  
+**Goal:** Real signup/login with hashed passwords and JWTs, backed by Postgres.
 **Tech:** PostgreSQL (`auth_db`), Prisma ORM, Bcrypt, JWT, Joi, Redis.
 
 ```mermaid
@@ -113,6 +115,7 @@ flowchart TD
 ```
 
 ### Verification & Deliverable
+
 - Running on Port `4001`.
 - Endpoints: `POST /auth/signup`, `POST /auth/login`, `POST /auth/refresh`, `GET /auth/me`, `GET /auth/turn-credentials`, `GET /internal/verify-token`.
 - Publishes `user-created` event to Redis on successful registration.
@@ -122,7 +125,7 @@ flowchart TD
 
 ## Phase 3 — User Service [✅ COMPLETED]
 
-**Goal:** Profile auto-created the moment someone signs up, via an event — not a direct call.  
+**Goal:** Profile auto-created the moment someone signs up, via an event — not a direct call.
 **Tech:** PostgreSQL (`user_db`), Prisma ORM, Redis Pub/Sub, Express.
 
 ```mermaid
@@ -136,6 +139,7 @@ flowchart TD
 ```
 
 ### Verification & Deliverable
+
 - Running on Port `4002`.
 - Listens to Redis `user-created` channel to create a default `Profile` row automatically.
 - Endpoints: `GET /me` (fetch profile) and `PATCH /me` (update displayName, avatarUrl, preferences).
@@ -144,7 +148,7 @@ flowchart TD
 
 ## Phase 4 — Room Service [✅ COMPLETED]
 
-**Goal:** Authenticated users can create and join rooms, with real relational data.  
+**Goal:** Authenticated users can create and join rooms, with real relational data.
 **Tech:** PostgreSQL (`room_db`), Prisma ORM, NanoID, Axios.
 
 ```mermaid
@@ -158,6 +162,7 @@ flowchart TD
 ```
 
 ### Verification & Deliverable
+
 - Running on Port `4003`.
 - Endpoints: `POST /v1/rooms`, `GET /v1/rooms/:code`, `POST /v1/rooms/:code/join`, `POST /v1/rooms/:code/leave`, `POST /v1/rooms/:code/end`.
 - Manages transactional creation of room codes and participant tracking.
@@ -166,7 +171,7 @@ flowchart TD
 
 ## Phase 5 — Signaling Service [✅ COMPLETED]
 
-**Goal:** Real-time WebRTC offer/answer/ICE candidate relay between peers via WebSocket.  
+**Goal:** Real-time WebRTC offer/answer/ICE candidate relay between peers via WebSocket.
 **Tech:** Socket.io, TypeScript, Redis Sets for Presence.
 
 ```mermaid
@@ -184,6 +189,7 @@ sequenceDiagram
 ```
 
 ### Verification & Deliverable
+
 - Running on Port `4004`.
 - Validates room state with Room Service via REST.
 - Handlers for `join-room`, `offer`, `answer`, `ice-candidate`, `chat-message`, `leave-room`.
@@ -193,10 +199,11 @@ sequenceDiagram
 
 ## Phase 6 — WebRTC Client Verification [✅ COMPLETED]
 
-**Goal:** Verification of real 1:1 audio/video calling using WebRTC standards.  
+**Goal:** Verification of real 1:1 audio/video calling using WebRTC standards.
 **Tech:** Vanilla JS, HTML5, `getUserMedia`, `RTCPeerConnection`.
 
 ### Verification & Deliverable
+
 - Located in `/test-client`.
 - Verifies real camera/microphone stream exchange over Socket.io signaling.
 - Run via `npx serve .` inside `/test-client`.
@@ -205,10 +212,11 @@ sequenceDiagram
 
 ## Phase 7 — TURN/STUN Infrastructure [✅ COMPLETED]
 
-**Goal:** Ensure WebRTC connections succeed across restrictive NATs and firewalls.  
+**Goal:** Ensure WebRTC connections succeed across restrictive NATs and firewalls.
 **Tech:** Coturn Docker Container, HMAC-SHA1 dynamic secret generation.
 
 ### Verification & Deliverable
+
 - Coturn configuration at `infra/coturn/turnserver.conf`.
 - Auth Service endpoint `GET /auth/turn-credentials` issues temporary TURN credentials.
 
@@ -216,7 +224,7 @@ sequenceDiagram
 
 ## Phase 8 — Chat Service [✅ COMPLETED]
 
-**Goal:** Persistent in-meeting chat storage and historical retrieval.  
+**Goal:** Persistent in-meeting chat storage and historical retrieval.
 **Tech:** MongoDB (`chat_db`), Mongoose, Redis Pub/Sub, Express.
 
 ```mermaid
@@ -230,15 +238,16 @@ flowchart TD
 ```
 
 ### Verification & Deliverable
+
 - Running on Port `4005`.
 - Subscribes to Redis `chat-message` channel to store chat logs asynchronously.
 - Endpoint: `GET /api/v1/chat/:roomId/messages` returns paginated message history.
 
 ---
 
-## Phase 9 — SFU Service (Group Calls) [⏳ PENDING]
+## Phase 9 — SFU Service (Group Calls) [✅ COMPLETED]
 
-**Goal:** Support 3+ participants in group calls without client bandwidth overload.  
+**Goal:** Support 3+ participants in group calls without client bandwidth overload.
 **New concept:** mediasoup (Router, Producer, Consumer, Transport).
 
 ```mermaid
@@ -253,9 +262,11 @@ flowchart TD
 ```
 
 ### Step 9.1 — Install
+
 - `npm install mediasoup` in `/services/sfu-service`
 
 ### Step 9.2 — `/src/mediasoup/router.ts`
+
 - One `mediasoup.Worker` per CPU core, one `Router` per active room created when the 3rd participant joins.
 
 ---

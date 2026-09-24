@@ -1,7 +1,6 @@
 # ---------- Stage 1: Build ----------
-FROM node:20-bookworm-slim AS builder
+FROM node:22-bookworm-slim AS builder
 
-# mediasoup ka C++ worker kabhi kabhi build karna padta hai
 RUN apt-get update && apt-get install -y --no-install-recommends \
     python3 python3-pip make g++ \
     && rm -rf /var/lib/apt/lists/*
@@ -13,13 +12,12 @@ RUN npm ci
 
 COPY tsconfig.json server.ts ./
 COPY src ./src
-RUN npm run build
+RUN npm run build && test -f dist/server.js
 
-# Dev packages hatao, mediasoup worker binary rehne do
 RUN npm prune --omit=dev
 
 # ---------- Stage 2: Runtime ----------
-FROM node:20-bookworm-slim
+FROM node:22-bookworm-slim
 
 ENV NODE_ENV=production
 WORKDIR /app
