@@ -96,6 +96,7 @@ services:
     depends_on:
       - redis
       - room-service
+      # - sfu-service   # uncomment once Step 12 (signaling -> SFU HTTP calls) is wired up
 
   chat-service:
     build: ./services/chat-service
@@ -108,14 +109,15 @@ services:
     depends_on:
       - mongo
       - redis
+
   sfu-service:
     build:
       context: ./services/sfu-service
     container_name: sfu-service
     restart: unless-stopped
     ports:
-      - "4006:4006"
-      - "40000-40100:40000-40100/udp"
+      - "4006:4006"                        # dev only — remove in production
+      - "40000-40100:40000-40100/udp"      # media (must match RTC_MIN_PORT/RTC_MAX_PORT below)
       - "40000-40100:40000-40100/tcp"
     environment:
       - PORT=4006
@@ -124,7 +126,9 @@ services:
       - NUM_WORKERS=2
       - RTC_MIN_PORT=40000
       - RTC_MAX_PORT=40100
-      - ANNOUNCED_IP=127.0.0.1
+      - ANNOUNCED_IP=127.0.0.1              # same machine = 127.0.0.1; LAN test = laptop's LAN IP; prod = public IP
+      # - INTERNAL_SECRET=${INTERNAL_SECRET} # uncomment once Step 10 (authGuard) is implemented; set INTERNAL_SECRET in a root .env (gitignored)
+
   # ==========================================================================
   # NAT TRAVERSAL — STUN/TURN (Phase 7)
   # ==========================================================================
@@ -132,7 +136,13 @@ services:
     image: coturn/coturn:latest
     container_name: coturn
     restart: unless-stopped
-    network_mode: host
+    # network_mode: host is Linux-only and will not work correctly on Docker
+    # Desktop for Windows/Mac. Use explicit port mappings instead. Adjust the
+    # relay range below to match whatever is set in turnserver.conf.
+    ports:
+      - "3478:3478/udp"
+      - "3478:3478/tcp"
+      - "49152-49200:49152-49200/udp"
     volumes:
       - ./infra/coturn/turnserver.conf:/etc/coturn/turnserver.conf
 
