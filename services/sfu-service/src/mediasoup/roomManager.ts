@@ -42,8 +42,18 @@ export async function closeRoom(roomId: string): Promise<void> {
     }
 
     const router = await routerPromise
-    
+
     router.close();
     routers.delete(roomId);
     logger.info({ roomId }, 'Router closed');
+}
+
+
+export async function getRouter(roomId: string) {
+    const routerPromise = routers.get(roomId)
+    if (!routerPromise) {
+        logger.error({ roomId }, 'Room not found');
+        throw new AppError(`Room ${roomId} does not exist yet`, 404);
+    }
+    return routerPromise
 }
