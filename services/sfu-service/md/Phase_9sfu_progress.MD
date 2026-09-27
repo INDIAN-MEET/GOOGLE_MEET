@@ -1,3 +1,192 @@
+# Phase 9 — SFU Service: Progress, Pending Work & Build Guide
+
+> **Branch:** `phase-9-sfu-service`
+> **Service folder:** `services/sfu-service` (HTTP Port `4006`, RTP/media ports `40000-40100`)
+> **Stack:** TypeScript, Express, Mediasoup v3, Pino
+> **Overall status:** 🟡 **IN PROGRESS — Step 6 complete & tested. Step 7 (Produce API) is next.**
+
+---
+
+## 0. What changed in this update
+
+| # | Change                                                                                     | Why                                                                                                                                                                                                 |
+| :-: | :----------------------------------------------------------------------------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1 | Step 6 (Peer store + Transports API) marked**✅ Done & Tested**                      | `POST /transports` and `POST /transports/connect` both verified working via Postman + local `tsx watch` run                                                                                   |
+| 2 | Error-handling bug in`transportController.ts` fixed and confirmed                        | Catch blocks were overwriting every thrown`AppError` (400/404/409) with a generic 500 — now they check `instanceof AppError` and pass the real status/message through                          |
+| 3 | New known issue logged:`routerController.ts` still has the old unconditional-500 pattern | Same class of bug as#2, just not fixed there yet                                                                                                                                                    |
+| 4 | Testing Log section added (Section 6)                                                      | Captures the actual Postman/log results so we don't re-derive them later                                                                                                                            |
+| 5 | Docker section marked clearly**not yet integrated**                                  | A standalone`Dockerfile` was drafted in chat discussion, but it is **not yet added to the project's `docker-compose.yml`**, and `INTERNAL_SECRET`/`authGuard` auth is not implemented |
+
+---
+
+## 1. Status Dashboard
+
+|    Step    | What it builds                                             |                        Status                        | Depends on |
+| :---------: | :--------------------------------------------------------- | :---------------------------------------------------: | :--------- |
+|      1      | Skeleton (`server.ts`, `app.ts`, `/health`)          |                        ✅ Done                        | —         |
+|      2      | Dockerfile (multi-stage)                                   | 🟡 Drafted, not integrated into`docker-compose.yml` | —         |
+|      3      | Mediasoup config (`config/mediasoup.ts`)                 |                        ✅ Done                        | —         |
+|      4      | Worker pool (`workerPool.ts`)                            |                        ✅ Done                        | 3          |
+|      5      | Room manager +`GET /router-capabilities/:roomId`         |                        ✅ Done                        | 4          |
+| **6** | **Peer store (`peerManager.ts`) + Transports API** |               ✅**Done & tested**               | 5          |
+|      7      | **Produce API** + `GET /producers/:roomId`         |                   ⏳**Next**                   | 6          |
+|      8      | Consume + Resume API                                       |                      ⏳ Pending                      | 7          |
+|      9      | Peer leave + cleanup (`POST /peers/leave`)               |                      ⏳ Pending                      | 6, 7, 8    |
+|     10     | Internal auth + validation (`authGuard`, Joi)            |                      ⏳ Pending                      | 6          |
+|     11     | Docker Compose env + UDP/TCP port publishing               |                      ⏳ Pending                      | 2          |
+|     12     | Signaling integration (`sfuClient`, socket events)       |                      ⏳ Pending                      | 6–11      |
+|     13     | Frontend (`mediasoup-client`)                            |                      ⏳ Pending                      | 12         |
+|     14     | Mesh → SFU mode switch                                    |                      ⏳ Pending                      | 13         |
+|     15     | Multi-tab testing + docs + main checklist update           |                      ⏳ Pending                      | 14         |
+
+---
+
+## 2. What's actually built and verified right now
+
+```
+services/sfu-service/
+├── server.ts
+├── package.json                     ← "type": "module"
+├── tsconfig.json
+├── .env                             ← PORT, NUM_WORKERS, RTC ports, ANNOUNCED_IP
+└── src/
+    ├── app.ts                       ← /health + /api/v1/sfu routes + errorHandler
+    ├── config/
+    │   ├── env.ts
+    │   └── mediasoup.ts             ← codecs (Opus, VP8, H264), listenInfos
+    ├── mediasoup/
+    │   ├── workerPool.ts            ← round-robin getNextWorker()
+    │   ├── roomManager.ts           ← roomId → Promise<Router>
+    │   ├── peerManager.ts           ← getOrCreatePeer, getPeer, getPeerCount
+    │   └── transportManager.ts      ← createTransport, connectTransport
+    ├── controllers/
+    │   ├── routerController.ts
+    │   └── transportController.ts
+    ├── routes/sfuRoutes.ts
+    ├── middleware/errorHandler.ts
+    └── utils/ (logger.ts, AppError.ts)
+```
+
+**Working & tested endpoints:**
+
+| Method | URL                                         | Result                                                                      |
+| :----- | :------------------------------------------ | :-------------------------------------------------------------------------- |
+| GET    | `/health`                                 | `{ "status": "ok" }`                                                      |
+| GET    | `/api/v1/sfu/router-capabilities/:roomId` | `{ success, data: { routerRtpCapabilities } }`                            |
+| POST   | `/api/v1/sfu/transports`                  | `{ success, data: { id, iceParameters, iceCandidates, dtlsParameters } }` |
+| POST   | `/api/v1/sfu/transports/connect`          | `{ success, data: { connected: true } }`                                  |
+
+**Not yet implemented in `peerManager.ts`:** `findProducer`, `listProducers`, `removePeer` — these are needed for Step 7 (produce) and Step 9 (cleanup) and don't exist yet. Current file only has the three functions listed above.
+
+---
+
+## 3. Step 6 — Peer store + Transports API — ✅ Done & Tested
+
+**What it does:** gives each peer up to one `send` transport and one `recv` transport (the "pipe" a browser will use to upload or download media later).
+
+### Endpoints
+
+| Method | URL                                | Body                                                | Returns                                                  |
+| :----- | :--------------------------------- | :-------------------------------------------------- | :------------------------------------------------------- |
+| POST   | `/api/v1/sfu/transports`         | `{ roomId, peerId, direction: 'send' \| 'recv' }`  | `{ id, iceParameters, iceCandidates, dtlsParameters }` |
+| POST   | `/api/v1/sfu/transports/connect` | `{ roomId, peerId, transportId, dtlsParameters }` | `{ connected: true }`                                  |
+
+### Key implementation details (as currently coded)
+
+- `createTransport` spreads `mediasoupConfig.webRtcTransport` and adds `enableUdp: true, enableTcp: true, preferUdp: true`, plus `appData: { peerId, direction }`.
+- **Rule enforced:** one peer = max 1 send + 1 recv transport. A duplicate direction request throws `AppError(409)`.
+- `transport.on('dtlsstatechange', ...)` closes the transport on `failed`/`closed` state.
+- `transport.observer.on('close', ...)` removes the transport from the peer's map so it never goes stale.
+- `connectTransport` looks up the transport by id on the peer; missing transport → `AppError(404)`; a failed/duplicate `.connect()` call → `AppError(409)`.
+- **Fixed this round:** both handlers' `catch` blocks now do `next(err instanceof AppError ? err : new AppError('...', 500))` instead of unconditionally wrapping everything as 500. This was the actual root cause of every expected 400/404/409 in testing coming back as 500 before the fix.
+
+---
+
+## 4. Testing Log (Step 6 verification)
+
+Run against local `tsx watch server.ts` and Postman, using the project's own runbook (roomId `xmm-p52u-06n` unless noted):
+
+| # | Case                                                                                 | Expected                                                           | Result                                                                                                                                                         |
+| :-: | :----------------------------------------------------------------------------------- | :----------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1 | `GET /router-capabilities/:roomId`                                                 | 200,`routerRtpCapabilities`                                      | ✅ Confirmed working (also seen fetched repeatedly in raw logs)                                                                                                |
+| 2 | `POST /transports` — create send transport                                        | 200,`id`/`iceParameters`/`iceCandidates`/`dtlsParameters`  | ✅ Confirmed — real response captured with valid ICE/DTLS payload                                                                                             |
+| 3 | `POST /transports` — duplicate send transport, same peer                          | 409, "Peer already has a send transport"                           | ✅ Confirmed via raw logs (post-fix, real 409 now returned instead of overwritten 500)                                                                         |
+| 4 | `POST /transports` — recv transport, same peer                                    | 200, new`id`                                                     | Expected to pass (same code path as#2 with different direction) — not explicitly re-confirmed after the fix, recommend a quick re-run                         |
+| 5 | `POST /transports` — missing fields                                               | 400, "roomId, peerId and a valid direction are required"           | ✅ Confirmed in earlier raw logs                                                                                                                               |
+| 6 | `POST /transports` — nonexistent room                                             | 404, "Room ... does not exist yet"                                 | ✅ Confirmed in earlier raw logs (was showing as 500 before the fix; fix corrects this class of bug)                                                           |
+| 7 | `POST /transports/connect` — missing fields                                       | 400, "roomId, peerId, transportId and dtlsParameters are required" | ✅**Confirmed post-fix** — same `AppError` and same `400` now appear on both the throw and the final response, instead of being replaced with a 500 |
+| 8 | `POST /transports/connect` — peer doesn't exist                                   | 404, "Peer not found. Create a transport first."                   | ⏳ Not yet run — do this next                                                                                                                                 |
+| 9 | `POST /transports/connect` — transport doesn't exist (real peer, bad transportId) | 404, "Transport not found"                                         | ⏳ Not yet run — do this next                                                                                                                                 |
+| — | `POST /transports/connect` — valid transportId + echoed dtlsParameters            | 200,`{ connected: true }`                                        | ✅ Confirmed — log shows`"msg":"Transport connected"` for `peerId: peer-2`, `transportId: 6e18af52-...`                                                 |
+
+**Important caveat on the successful connect above:** it used the *same* `dtlsParameters` object the server had just returned, echoed back — not a real client-generated DTLS fingerprint. It proves the endpoint logic and `transport.connect()` call path work, but it is **not** a genuine two-sided WebRTC handshake. Real DTLS validation only happens once an actual browser + `mediasoup-client` is wired up in Step 13.
+
+**Remaining before Step 6 is fully closed out:** run cases 4, 8, and 9 above (note: the in-memory peer/room state resets on every server restart, so re-run cases 1 → 2 → 4 first to repopulate `peer-1` before testing 8/9).
+
+---
+
+## 5. Step 7 — Produce API (Next)
+
+**Goal:** let a browser push its camera/mic into the SFU, and let a newly-joined peer discover producers that already exist in the room.
+
+**New files needed:**
+
+| File                                     | Job                           |
+| :--------------------------------------- | :---------------------------- |
+| `src/mediasoup/producerManager.ts`     | Track producers per peer/room |
+| `src/controllers/produceController.ts` | HTTP handler for`/produce`  |
+
+| Method | URL                                             | Body                                                             | Returns                                    |
+| :----- | :---------------------------------------------- | :--------------------------------------------------------------- | :----------------------------------------- |
+| POST   | `/api/v1/sfu/produce`                         | `{ roomId, peerId, transportId, kind, rtpParameters, source }` | `{ producerId }`                         |
+| GET    | `/api/v1/sfu/producers/:roomId?exceptPeerId=` | —                                                               | `[{ producerId, peerId, kind, source }]` |
+
+Key points to implement:
+
+- Verify `transport.appData.direction === 'send'` before producing — reject with 400 otherwise.
+- Store `source` (`'camera' | 'mic' | 'screen'`) in `appData` for later tile rendering / screen-share support.
+- Hook `producer.on('transportclose', ...)` and `producer.observer.on('close', ...)` to keep the peer's map accurate.
+- `GET /producers/:roomId` is required because `new-producer` broadcasts only reach peers already in the room — a late joiner needs this endpoint to catch up on existing streams.
+
+---
+
+## 6. Known Issues (current code)
+
+| # | Issue                                                                                                                                                             | Status                                                                 |
+| :-: | :---------------------------------------------------------------------------------------------------------------------------------------------------------------- | :--------------------------------------------------------------------- |
+| 1 | `transportController.ts` catch blocks overwrote every `AppError` with a generic 500                                                                           | ✅**Fixed and confirmed** this round                             |
+| 2 | `routerController.ts` catch block still unconditionally throws `AppError(500)` regardless of what was actually thrown                                         | ⏳ Still present — same class of bug as#1, just not patched here yet  |
+| 3 | `getOrCreateRouter`'s `.catch` in `roomManager.ts` discards the original error before throwing its own `AppError(500)`                                    | ⏳ Still present — add`logger.error({ err }, ...)` before the throw |
+| 4 | `closeRoom` in `roomManager.ts` awaits the stored router promise with no `try/catch` — if that promise ever rejects, `closeRoom` itself throws unhandled | ⏳ Still present                                                       |
+| 5 | Dockerfile drafted only in chat discussion, not yet added to the project's actual`docker-compose.yml`                                                           | ⏳ Pending (Step 11)                                                   |
+| 6 | No internal auth yet —`/api/v1/sfu/*` is reachable by anything that can reach port 4006                                                                        | ⏳ Pending (Step 10)                                                   |
+
+**Suggested fix for issue #4:**
+
+```ts
+export async function closeRoom(roomId: string): Promise<void> {
+  const routerPromise = routers.get(roomId);
+  if (!routerPromise) return;
+  routers.delete(roomId); // remove first, so a fresh join can create a new Router
+  try {
+    const router = await routerPromise;
+    router.close();
+    logger.info({ roomId }, 'Router closed');
+  } catch (err) {
+    logger.warn({ err, roomId }, 'Router was already failed/closed');
+  }
+}
+```
+
+---
+
+## 7. Next Action
+
+1. Run the 3 remaining Step 6 test cases (4, 8, 9 from Section 4) to fully close out Step 6.
+2. Build `producerManager.ts` + `produceController.ts` for Step 7, following the same pattern as `transportManager.ts`/`transportController.ts` (including the `instanceof AppError` fix from the start this time).
+3. Add the `/produce` and `/producers/:roomId` routes to `sfuRoutes.ts`.
+4. While there, patch known issues #2, #3, and #4 above since they're small and isolate
+
 # Phase 9 — SFU Service: Progress, Pending Work & Proper Build Guide
 
 > **Branch:** `phase-9-sfu-service`
@@ -20,7 +209,7 @@
 | 6 | Mesh → SFU switch ka**proper** flow + hysteresis             | Sirf "3rd user pe switch" likhna incomplete tha                                               |
 | 7 | Server→client events (`producer-closed`, `peer-left`) add kiye | SFU HTTP hai, wo khud push nahi kar sakta                                                     |
 | 8 | Known issues list (README env mismatch,`closeRoom` bug, etc.)     | Real code review se mile                                                                      |
-| 9 | Main checklist mein Phase 9 ko**✅ se ⏳ IN PROGRESS** karna  | Abhi complete nahi hai                                                                        |
+| 9 | Main checklist mein Phase 9 ko**✅ se ⏳ IN PROGRESS** karna        | Abhi complete nahi hai                                                                        |
 
 ---
 
