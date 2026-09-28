@@ -22,7 +22,8 @@ export function getOrCreateRouter(
                 return router
             })
             .catch(err => {
-                routers.delete(roomId); //fail try again 
+                logger.error({ err, roomId }, 'Router creation failed');
+                routers.delete(roomId); // allow retry
                 throw new AppError('Failed to create Router', 500)
             })
 
@@ -34,18 +35,18 @@ export function getOrCreateRouter(
 
 
 export async function closeRoom(roomId: string): Promise<void> {
-    const routerPromise = routers.get(roomId)
+  const routerPromise = routers.get(roomId)
+  if (!routerPromise) return;
 
-    if (!routerPromise) {
-        logger.error({ roomId }, 'Room not found');
-        return
-    }
+  routers.delete(roomId); // delete first so a new join can create a fresh Router
 
-    const router = await routerPromise
-
+  try {
+    const router = await routerPromise;
     router.close();
-    routers.delete(roomId);
     logger.info({ roomId }, 'Router closed');
+  } catch (err) {
+    logger.warn({ err, roomId }, 'Router was already failed/closed');
+  }
 }
 
 

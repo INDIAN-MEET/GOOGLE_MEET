@@ -5,22 +5,22 @@ import AppError from '../utils/AppError.ts';
 
 
 export async function getRouterCapabilities(
-    req: Request,
-    res: Response,
-    next: NextFunction,
+  req: Request,
+  res: Response,
+  next: NextFunction,
 ) {
-    try {
-        const roomId = String(req.params.roomId);
-        const router = await getOrCreateRouter(roomId)
-        
-        logger.info({ roomId, routerId: router.id }, 'Router capabilities fetched');
+  try {
+    const roomId = String(req.params.roomId);
+    const router = await getOrCreateRouter(roomId)
 
-        res.json({
-            success: true,
-            data: { routerRtpCapabilities: router.rtpCapabilities },
-        });
-    } catch (err) {
-        logger.error({ err }, 'Failed to get Router capabilities');
-        next(new AppError('Failed to get Router capabilities', 500));
-    }
+    logger.info({ roomId, routerId: router.id }, 'Router capabilities fetched');
+
+    res.json({
+      success: true,
+      data: { routerRtpCapabilities: router.rtpCapabilities },
+    });
+  } catch (err) {
+    logger.error({ err }, 'Failed to get Router capabilities');
+    next(err instanceof AppError ? err : new AppError('Failed to get Router capabilities', 500));
+  }
 }
