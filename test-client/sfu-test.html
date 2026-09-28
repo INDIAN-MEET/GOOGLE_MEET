@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>SFU Test Page</title>
+<style>
+  body { font-family: system-ui, sans-serif; background:#0d0d0f; color:#e8e8f0; margin:0; padding:24px; }
+  .wrap { max-width:980px; margin:0 auto; display:grid; gap:18px; }
+  .card { background:#16161a; border:1px solid #2a2a35; border-radius:12px; padding:18px; }
+  h2 { margin:0 0 12px; font-size:15px; }
+  input { background:#1e1e24; border:1px solid #2a2a35; color:#e8e8f0; padding:8px 10px; border-radius:8px; width:260px; font-family:monospace; }
+  button { background:#4f8ef7; color:#fff; border:0; padding:9px 16px; border-radius:8px; font-weight:600; cursor:pointer; margin-right:8px; }
+  button.sec { background:#2a2a35; }
+  button:disabled { opacity:.4; cursor:not-allowed; }
+  table { width:100%; border-collapse:collapse; font-size:13px; }
+  td, th { text-align:left; padding:6px 8px; border-bottom:1px solid #2a2a35; }
+  .pass { color:#3fcf8e; font-weight:700; } .fail { color:#f76060; font-weight:700; }
+  #log { font-family:monospace; font-size:12px; max-height:240px; overflow:auto; white-space:pre-wrap; color:#9a9ab5; }
+  video { width:320px; border-radius:10px; background:#000; }
+  #summary { margin-top:10px; font-weight:700; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card">
+    <h2>SFU Base URL</h2>
+    <input id="base" value="http://localhost:4006/api/v1/sfu" style="width:420px" />
+  </div>
+
+  <div class="card">
+    <h2>Part 1: API checks (Step 6 + Step 7 error paths)</h2>
+    <button id="runApi">Run all checks</button>
+    <div id="summary"></div>
+    <table id="results"><thead><tr><th>#</th><th>Test</th><th>Expected</th><th>Got</th><th></th></tr></thead><tbody></tbody></table>
+  </div>
+
+  <div class="card">
+    <h2>Part 2: Real produce with camera + mic (mediasoup-client)</h2>
+    <button id="startReal">Start real produce</button>
+    <button id="listAll" class="sec" disabled>List producers</button>
+    <button id="closeT" class="sec" disabled>Close send transport</button>
+    <div style="margin-top:12px"><video id="lv" autoplay playsinline muted></video></div>
+  </div>
+
+  <div class="card"><h2>Log</h2><div id="log"></div></div>
+</div>
+
+<script type="module">
+import * as mc from 'https://esm.sh/mediasoup-client@3';
+
+const $ = (id) => document.getElementById(id);
+const base = () => $('base').value.replace(/\/$/, '');
+const logEl = $('log');
+const log = (m) => { logEl.textContent += `[${new Date().toLocaleTimeString()}] ${m}\n`; logEl.scrollTop = logEl.scrollHeight; };
+
+async function call(method, path, body) {
+  const res = await fetch(base() + path, {
+    method,
+    headers: { 'Content-Type': 'application/json' },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  let json = null;
+  try { json = await res.json(); } catch {}
+  return { status: res.status, json };
+}
+
+// ---------- Part 1 ----------
+$('runApi').onclick = async () => {
+  const tbody = $('results').querySelector('tbody');
+  tbody.innerHTML = ''; $('summary').textContent = '';
+  const room = 'ui-test-' + Math.random().toString(36).slice(2, 8);
+  const peer = 'ui-peer-1';
+  let sendId = null, recvId = null, n = 0, passed = 0, total = 0;
+
+  async function t(name, expected, fn) {
+    total++; n++;
+    let got;
+    try { got = await fn(); } catch (e) { got = { status: 'ERR ' + e.message }; }
+    const ok = got.status === expected;
+    if (ok) passed++;
+    tbody.insertAdjacentHTML('beforeend',
+      `<tr><td>${n}</td><td>${name}</td><td>${expected}</td><td>${got.status}</td><td class="${ok ? 'pass' : 'fail'}">${ok ? 'PASS' : 'FAIL'}</td></tr>`);
+    return got;
+  }
+
+  const rtp = { codecs: [], encodings: [] };
+
+  await t('GET router-capabilities', 200, () => call('GET', `/router-capabilities/${room}`));
+  const s = await t('POST transports (send)', 200, () => call('POST', '/transports', { roomId: room, peerId: peer, direction: 'send' }));
+  sendId = s.json?.data?.id;
+  await t('POST transports (send) duplicate', 409, () => call('POST', '/transports', { roomId: room, peerId: peer, direction: 'send' }));
+  const r = await t('POST transports (recv)', 200, () => call('POST', '/transports', { roomId: room, peerId: peer, direction: 'recv' }));
+  recvId = r.json?.data?.id;
+  await t('POST transports missing fields', 400, () => call('POST', '/transports', {}));
+  await t('POST transports nonexistent room', 404, () => call('POST', '/transports', { roomId: 'no-such-room', peerId: peer, direction: 'send' }));
+  await t('POST connect missing fields', 400, () => call('POST', '/transports/connect', {}));
+  await t('POST connect ghost peer', 404, () => call('POST', '/transports/connect', { roomId: room, peerId: 'ghost', transportId: 'x', dtlsParameters: {} }));
+  await t('POST connect bad transportId', 404, () => call('POST', '/transports/connect', { roomId: room, peerId: peer, transportId: 'bad-id', dtlsParameters: {} }));
+  await t('POST produce empty body', 400, () => call('POST', '/produce', {}));
+  await t('POST produce bad source', 400, () => call('POST', '/produce', { roomId: room, peerId: peer, transportId: sendId, kind: 'video', source: 'webcam', rtpParameters: rtp }));
+  await t('POST produce kind/source mismatch', 400, () => call('POST', '/produce', { roomId: room, peerId: peer, transportId: sendId, kind: 'audio', source: 'camera', rtpParameters: rtp }));
+  await t('POST produce ghost peer', 404, () => call('POST', '/produce', { roomId: room, peerId: 'ghost', transportId: sendId, kind: 'video', source: 'camera', rtpParameters: rtp }));
+  await t('POST produce bad transport', 404, () => call('POST', '/produce', { roomId: room, peerId: peer, transportId: 'bad', kind: 'video', source: 'camera', rtpParameters: rtp }));
+  await t('POST produce on recv transport', 400, () => call('POST', '/produce', { roomId: room, peerId: peer, transportId: recvId, kind: 'video', source: 'camera', rtpParameters: rtp }));
+  await t('GET producers (empty)', 200, () => call('GET', `/producers/${room}`));
+
+  $('summary').innerHTML = `<span class="${passed === total ? 'pass' : 'fail'}">${passed}/${total} passed</span>`;
+  log(`Part 1 done: ${passed}/${total} passed`);
+};
+
+// ---------- Part 2 ----------
+let realRoom, realPeer, sendTransport;
+
+$('startReal').onclick = async () => {
+  try {
+    $('startReal').disabled = true;
+    realRoom = 'real-' + Math.random().toString(36).slice(2, 8);
+    realPeer = 'real-peer-1';
+
+    log('1) Fetch router capabilities');
+    const caps = await call('GET', `/router-capabilities/${realRoom}`);
+    const device = new mc.Device();
+    await device.load({ routerRtpCapabilities: caps.json.data.routerRtpCapabilities });
+    log('   Device loaded. Can produce video: ' + device.canProduce('video'));
+
+    log('2) Create send transport');
+    const tr = await call('POST', '/transports', { roomId: realRoom, peerId: realPeer, direction: 'send' });
+    if (tr.status !== 200) throw new Error('create transport failed: ' + tr.status);
+    sendTransport = device.createSendTransport(tr.json.data);
+
+    sendTransport.on('connect', async ({ dtlsParameters }, cb, eb) => {
+      log('3) DTLS connect');
+      const r = await call('POST', '/transports/connect', {
+        roomId: realRoom, peerId: realPeer, transportId: sendTransport.id, dtlsParameters,
+      });
+      r.status === 200 ? cb() : eb(new Error('connect failed: ' + r.status));
+    });
+
+    sendTransport.on('produce', async ({ kind, rtpParameters, appData }, cb, eb) => {
+      log('4) Produce ' + kind + ' (' + appData.source + ')');
+      const r = await call('POST', '/produce', {
+        roomId: realRoom, peerId: realPeer, transportId: sendTransport.id,
+        kind, rtpParameters, source: appData.source,
+      });
+      r.status === 200 ? cb({ id: r.json.data.producerId }) : eb(new Error('produce failed: ' + r.status));
+    });
+
+    sendTransport.on('connectionstatechange', (s) => log('   transport state: ' + s));
+
+    const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+    $('lv').srcObject = stream;
+
+    const vp = await sendTransport.produce({ track: stream.getVideoTracks()[0], appData: { source: 'camera' } });
+    const ap = await sendTransport.produce({ track: stream.getAudioTracks()[0], appData: { source: 'mic' } });
+    log(`   video producer: ${vp.id}\n   audio producer: ${ap.id}`);
+
+    $('listAll').disabled = false;
+    $('closeT').disabled = false;
+    await checkList();
+  } catch (e) {
+    log('ERROR: ' + e.message);
+    $('startReal').disabled = false;
+  }
+};
+
+async function checkList() {
+  const all = await call('GET', `/producers/${realRoom}`);
+  const except = await call('GET', `/producers/${realRoom}?exceptPeerId=${realPeer}`);
+  log(`   list (all): ${all.json.data.length} producers -> ${JSON.stringify(all.json.data.map(p => p.source))}`);
+  log(`   list (except me): ${except.json.data.length} producers`);
+  const ok = all.json.data.length === 2 && except.json.data.length === 0;
+  log(ok ? 'PASS: expected 2 / 0' : 'FAIL: expected 2 / 0');
+}
+
+$('listAll').onclick = checkList;
+
+$('closeT').onclick = async () => {
+  sendTransport.close();
+  log('Closed send transport on the client. Waiting 1s, then listing...');
+  await new Promise((r) => setTimeout(r, 1000));
+  const all = await call('GET', `/producers/${realRoom}`);
+  log(`   list after client close: ${all.json.data.length} producers`);
+  log(all.json.data.length === 0 ? 'PASS: producers cleaned up' : 'INFO: still listed (see note below)');
+};
+</script>
+</body>
+</html>

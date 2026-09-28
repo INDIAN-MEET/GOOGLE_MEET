@@ -7,7 +7,7 @@ async function main() {
   await createWorkers();
 
   app.listen(env.port, () => {
-    logger.info(`SFU service running on port https://localhost:${env.port}`);
+    logger.info(`SFU service running on http://localhost:${env.port}`);
   });
 }
 

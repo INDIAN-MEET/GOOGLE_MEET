@@ -52,3 +52,47 @@ export function getPeerCount(roomId: string): number {
     return peerCount ?? 0
 }
 
+
+
+export interface ProducerInfo {
+    producerId: string;
+    peerId: string;
+    kind: mediasoup.types.MediaKind;
+    source: string;
+}
+
+export function findProducer(roomId: string, producerId: string): { peer: Peer; producer: mediasoup.types.Producer } | undefined {
+    const roomPeers = rooms.get(roomId);
+    if (!roomPeers) return undefined;
+
+    for (const peer of roomPeers.values()) {
+        const producer = peer.producers.get(producerId);
+        if (producer) return { peer, producer };
+    }
+    return undefined;
+}
+
+
+// All producers in a room, optionally excluding one peer (the asker)
+export function listProducers(roomId: string, exceptPeerId?: string): ProducerInfo[] {
+    const roomPeers = rooms.get(roomId)
+    if (!roomPeers) return [];
+
+    const result: ProducerInfo[] = []
+
+    for (const peer of roomPeers.values()) {
+        
+        if (exceptPeerId && peer.id === exceptPeerId) continue;
+
+        for (const producer of peer.producers.values()) {
+            result.push({
+                producerId: producer.id,
+                peerId: peer.id,
+                kind: producer.kind,
+                source: String(producer.appData.source ?? 'unknown'),
+            });
+        }
+    }
+
+    return result
+}

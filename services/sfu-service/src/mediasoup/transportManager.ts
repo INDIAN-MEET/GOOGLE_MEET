@@ -66,3 +66,12 @@ export async function connectTransport(peer: Peer, transportId: string, dtlsPara
 
     logger.info({ peerId: peer.id, transportId }, 'Transport connected');
 }
+
+export function findTransportByDirection(
+    peer: Peer,
+    direction: TransportDirection,
+): mediasoup.types.WebRtcTransport | undefined {
+    return [...peer.transports.values()].find(
+        t => t.appData.direction === direction
+    )
+}
