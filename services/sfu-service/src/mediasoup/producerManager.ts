@@ -12,7 +12,7 @@ const SOURCE_KIND: Record<ProducerSource, mediasoup.types.MediaKind> = {
 };
 
 export function isValidSource(value: unknown): value is ProducerSource {
-    return typeof value === 'string' && value in SOURCE_KIND;
+    return typeof value === 'string' && Object.hasOwn(SOURCE_KIND, value);
 }
 
 export function isValidKind(value: unknown): value is mediasoup.types.MediaKind {
@@ -54,7 +54,7 @@ export async function createProducer(
         logger.error({ err, peerId: peer.id, transportId }, 'transport.produce failed');
         throw new AppError('Failed to create producer (invalid rtpParameters?)', 400);
     }
-    
+
     peer.producers.set(producer.id, producer);
     // Transport closed -> mediasoup closes the producer itself. Log only.
     producer.on('transportclose', () => {
