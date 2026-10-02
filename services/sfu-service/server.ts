@@ -1,4 +1,4 @@
-import { app } from './src/app.ts';
+import  app  from './src/app.ts';
 import { env } from './src/config/env.ts';
 import { logger } from './src/utils/logger.ts';
 import { createWorkers } from './src/mediasoup/workerPool.ts';
