@@ -20,7 +20,9 @@ export async function getRouterCapabilities(
       data: { routerRtpCapabilities: router.rtpCapabilities },
     });
   } catch (err) {
-    logger.error({ err }, 'Failed to get Router capabilities');
+    if (!(err instanceof AppError)) {
+      logger.error({ err }, 'Failed to get Router capabilities');
+    }
     next(err instanceof AppError ? err : new AppError('Failed to get Router capabilities', 500));
   }
 }

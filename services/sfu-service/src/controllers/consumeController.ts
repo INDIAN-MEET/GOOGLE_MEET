@@ -42,7 +42,9 @@ export async function consumeHandler(req: Request, res: Response, next: NextFunc
             },
         });
     } catch (err) {
-        logger.error({ err }, 'Failed to consume');
+        if (!(err instanceof AppError)) {
+            logger.error({ err }, 'Failed to consume');
+        }
         next(err instanceof AppError ? err : new AppError('Failed to consume', 500));
     }
 }
@@ -65,7 +67,9 @@ export async function resumeConsumerHandler(req: Request, res: Response, next: N
 
         res.json({ success: true, data: { resumed: true } });
     } catch (err) {
-        logger.error({ err }, 'Failed to resume consumer');
+        if (!(err instanceof AppError)) {
+            logger.error({ err }, 'Failed to resume consumer');
+        }
         next(err instanceof AppError ? err : new AppError('Failed to resume consumer', 500));
     }
 }

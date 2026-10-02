@@ -3,7 +3,7 @@
  * * @param {string} message
  * * @param {number} statusCode
  */
-class AppError extends Error {
+export class AppError extends Error {
     statusCode: number
 
     constructor(message: string, statusCode: number = 400) {

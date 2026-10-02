@@ -3,6 +3,7 @@ import { getRouterCapabilities } from '../controllers/routerController.ts';
 import { createTransportHandler, connectTransportHandler } from '../controllers/transportController.ts';
 import { produceHandler, listProducersHandler } from '../controllers/produceController.ts';
 import { consumeHandler, resumeConsumerHandler } from '../controllers/consumeController.ts';
+import { leavePeerHandler } from '../controllers/peerController.ts';
 
 const router = Router();
 
@@ -13,5 +14,6 @@ router.post('/produce', produceHandler);
 router.get('/producers/:roomId', listProducersHandler);
 router.post('/consume', consumeHandler);
 router.post('/consumer/resume', resumeConsumerHandler);
+router.post('/peers/leave', leavePeerHandler);
 
 export default router;

@@ -29,7 +29,9 @@ export async function produceHandler(req: Request, res: Response, next: NextFunc
 
         res.json({ success: true, data: { producerId: producer.id } });
     } catch (err) {
-        logger.error({ err }, 'Failed to produce');
+        if (!(err instanceof AppError)) {
+            logger.error({ err }, 'Failed to produce');
+        }
         next(err instanceof AppError ? err : new AppError('Failed to produce', 500));
     }
 }
@@ -44,7 +46,9 @@ export function listProducersHandler(req: Request, res: Response, next: NextFunc
 
         res.json({ success: true, data: producers });
     } catch (err) {
-        logger.error({ err }, 'Failed to list producers');
+        if (!(err instanceof AppError)) {
+            logger.error({ err }, 'Failed to list producers');
+        }
         next(err instanceof AppError ? err : new AppError('Failed to list producers', 500));
     }
 }
