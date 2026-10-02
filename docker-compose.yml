@@ -128,7 +128,8 @@ services:
       - RTC_MAX_PORT=40100
       - ANNOUNCED_IP=127.0.0.1              # same machine = 127.0.0.1; LAN test = laptop's LAN IP; prod = public IP
       # - INTERNAL_SECRET=${INTERNAL_SECRET} # uncomment once Step 10 (authGuard) is implemented; set INTERNAL_SECRET in a root .env (gitignored)
-
+      - INTERNAL_SECRET=${INTERNAL_SECRET}
+      - DEV_CORS_ORIGIN=http://localhost:3000
   # ==========================================================================
   # NAT TRAVERSAL — STUN/TURN (Phase 7)
   # ==========================================================================

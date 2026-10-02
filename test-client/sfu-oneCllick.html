@@ -65,8 +65,10 @@
 
   <div class="bar">
     <input id="base" value="http://localhost:4006/api/v1/sfu" aria-label="SFU base URL" />
+    <input id="secret" type="password" placeholder="x-internal-secret (same as INTERNAL_SECRET)" aria-label="Internal secret" />
     <button id="go">1. Run full test</button>
     <button id="stop" class="ghost" disabled>2. Test leave + cleanup</button>
+    <button id="auth" class="ghost">3. Test auth (Step 10)</button>
   </div>
   <div id="verdict" class="verdict" role="status"></div>
 
@@ -96,9 +98,15 @@ const log = (m) => { logEl.textContent += m + '\n'; logEl.scrollTop = logEl.scro
  * STEP 2: Try to parse the JSON body (it may be empty on errors).
  * STEP 3: Return { status, json } so callers can check the status code.
  */
+function authHeaders() {
+  const h = { 'Content-Type': 'application/json' };
+  const sec = $('secret').value.trim();
+  if (sec) h['x-internal-secret'] = sec;
+  return h;
+}
 async function api(method, path, body) {
   const res = await fetch(base() + path, {
-    method, headers: { 'Content-Type': 'application/json' },
+    method, headers: authHeaders(),
     body: body ? JSON.stringify(body) : undefined,
   });
   let json = null; try { json = await res.json(); } catch {}
@@ -128,13 +136,21 @@ const STEPS = [
   'Producer list is empty',
   'Peer B leaves: room closes',
   'Room can be created again',
+  // Part 3 (Step 10 auth)
+  'Health is open without a secret (200)',
+  'API without secret is rejected (401)',
+  'API with wrong secret is rejected (401)',
+  'API with correct secret works (200)',
+  'Bad input gets a clean 400',
 ];
 const PART2_START = 10;
+const PART3_START = 16;
 
 const pathEl = $('path');
 pathEl.innerHTML = STEPS.map((s, i) => {
   const sep = i === 0 ? '<li class="sep">Part 1 \u2013 media flow</li>'
-            : i === PART2_START ? '<li class="sep">Part 2 \u2013 leave and cleanup (Step 9)</li>' : '';
+            : i === PART2_START ? '<li class="sep">Part 2 \u2013 leave and cleanup (Step 9)</li>'
+            : i === PART3_START ? '<li class="sep">Part 3 \u2013 internal auth (Step 10)</li>' : '';
   return `${sep}<li id="s${i}"><span>${s}</span><span class="t"></span></li>`;
 }).join('');
 const mark = (i, cls, txt = '') => { const li = $('s' + i); li.className = cls; li.querySelector('.t').textContent = txt; };
@@ -363,6 +379,79 @@ $('stop').onclick = async () => {
     $('verdict').textContent = 'Leave test failed. Details are in the list and log.';
   } finally {
     $('go').disabled = false;
+  }
+};
+
+/**
+ * testAuth()
+ *
+ * STEP 1: GET /health without any secret. Expect 200
+ *         (the Docker healthcheck must keep working).
+ *
+ * STEP 2: Call the API with NO x-internal-secret header. Expect 401.
+ *
+ * STEP 3: Call the API with a WRONG secret. Expect 401.
+ *
+ * STEP 4: Call the API with the CORRECT secret (from the input box).
+ *         Expect 200. Uses /peers/leave with a ghost peer, which
+ *         changes nothing on the server.
+ *
+ * STEP 5: Send invalid input with the correct secret
+ *         (transport direction "sideways"). Expect 400.
+ */
+async function testAuth() {
+  const apiBase = base();
+  const root = apiBase.replace(/\/api\/v1\/sfu$/, '');
+  const secret = $('secret').value.trim();
+  const body = JSON.stringify({ roomId: 'auth-check', peerId: 'ghost' });
+  const raw = (path, headers) => fetch(apiBase + path, { method: 'POST', headers, body });
+
+  // STEP 1
+  await step(PART3_START, async () => {
+    const r = await fetch(root + '/health');
+    check(r.status === 200, 'expected 200, got ' + r.status);
+  });
+
+  // STEP 2
+  await step(PART3_START + 1, async () => {
+    const r = await raw('/peers/leave', { 'Content-Type': 'application/json' });
+    check(r.status === 401, 'expected 401, got ' + r.status);
+  });
+
+  // STEP 3
+  await step(PART3_START + 2, async () => {
+    const r = await raw('/peers/leave', { 'Content-Type': 'application/json', 'x-internal-secret': 'wrong-' + Date.now() });
+    check(r.status === 401, 'expected 401, got ' + r.status);
+  });
+
+  // STEP 4
+  await step(PART3_START + 3, async () => {
+    check(secret, 'type the secret in the input box first');
+    const r = await raw('/peers/leave', { 'Content-Type': 'application/json', 'x-internal-secret': secret });
+    check(r.status === 200, 'expected 200, got ' + r.status + ' (is the secret the same as INTERNAL_SECRET?)');
+  });
+
+  // STEP 5
+  await step(PART3_START + 4, async () => {
+    const r = await post('/transports', { roomId: 'auth-check', peerId: 'ghost', direction: 'sideways' });
+    check(r.status === 400, 'expected 400, got ' + r.status);
+    log('  validation message: ' + (r.json?.message ?? '(none)'));
+  });
+}
+
+$('auth').onclick = async () => {
+  $('auth').disabled = true;
+  for (let i = PART3_START; i < STEPS.length; i++) mark(i, '', '');
+  $('verdict').className = 'verdict'; $('verdict').textContent = '';
+  try {
+    await testAuth();
+    $('verdict').className = 'verdict ok';
+    $('verdict').textContent = 'Part 3 passed (5/5). Auth and validation work.';
+  } catch (e) {
+    $('verdict').className = 'verdict bad';
+    $('verdict').textContent = 'Auth test failed. Details are in the list and log.';
+  } finally {
+    $('auth').disabled = false;
   }
 };
 
