@@ -93,11 +93,13 @@ services:
       - "4004:4004"
     env_file:
       - ./services/signaling-service/.env.docker
+    environment:
+      - SFU_SERVICE_URL=http://sfu-service:4006
+      - INTERNAL_SECRET=${INTERNAL_SECRET}
     depends_on:
       - redis
       - room-service
-      # - sfu-service   # uncomment once Step 12 (signaling -> SFU HTTP calls) is wired up
-
+      - sfu-service
   chat-service:
     build: ./services/chat-service
     container_name: chat-service
