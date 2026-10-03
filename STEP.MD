@@ -1,7 +1,7 @@
 # Video Meet App — Detailed File-by-File Build Steps & Execution Checklist
 
-> **Current Implementation Status:** Phases 0 through 8 are **✅ COMPLETED**.
-> Phases 9 through 16 are **⏳ NEXT / PENDING**.
+> **Current Implementation Status:** Phases 0 through 9 are **✅ COMPLETED**.
+> Phases 10 through 16 and Phase F are **⏳ NEXT / PENDING**.
 
 ---
 
@@ -18,7 +18,7 @@
 | **Phase 6**  | **WebRTC Verification**  | ✅ COMPLETED | `test-client/` standalone client for 1:1 video/audio WebRTC call verification.                         |
 | **Phase 7**  | **TURN/STUN**            | ✅ COMPLETED | Coturn container (`infra/coturn/turnserver.conf`) & HMAC credentials endpoint.                         |
 | **Phase 8**  | **Chat Service**         | ✅ COMPLETED | Port 4005. MongoDB Mongoose schema, Redis subscriber to`chat-message`, history REST API.               |
-| **Phase 9**  | **SFU Service**          |  ⏳ PENDING  | Folder created (`services/sfu-service`); needs `mediasoup` workers for group calls.                  |
+| **Phase 9**  | **SFU Service**          | ✅ COMPLETED | Backend service complete: mediasoup workers, routers, transports, producers, consumers, auth, signaling integration & room mode. Frontend in Phase F. |
 | **Phase 10** | **Recording Service**    |  ⏳ PENDING  | FFmpeg + BullMQ worker queue for async video call recordings.                                            |
 | **Phase 11** | **Notification Service** |  ⏳ PENDING  | Nodemailer / email worker for scheduled invites & meeting reminders.                                     |
 | **Phase 12** | **Gateway Hardening**    |  ⏳ PENDING  | Rate limiting (`express-rate-limit`) & centralized error handler validation.                           |
@@ -26,6 +26,7 @@
 | **Phase 14** | **CI/CD**                |  ⏳ PENDING  | GitHub Actions automated workflows for linting, testing, and Docker builds.                              |
 | **Phase 15** | **Kubernetes (K8s)**     |  ⏳ PENDING  | K8s deployments, ingress routing, HPA for signaling/SFU, Coturn StatefulSet.                             |
 | **Phase 16** | **Load Testing**         |  ⏳ PENDING  | Artillery load tests & PgBouncer database connection pooling.                                            |
+| **Phase F**  | **Frontend (React app)** |  ⏳ PENDING  | Call screen with mediasoup-client, chat sidebar, auth pages. Guide: `phase-9-sfu-frontend-guide.md`. |
 
 ---
 
@@ -40,7 +41,7 @@
 - [Phase 6 — WebRTC Client Verification [✅ COMPLETED]](#phase-6--webrtc-client-verification--completed)
 - [Phase 7 — TURN/STUN Infrastructure [✅ COMPLETED]](#phase-7--turnstun-infrastructure--completed)
 - [Phase 8 — Chat Service [✅ COMPLETED]](#phase-8--chat-service--completed)
-- [Phase 9 — SFU Service (Group Calls) [⏳ PENDING]](#phase-9--sfu-service-group-calls--pending)
+- [Phase 9 — SFU Service (Group Calls) [✅ COMPLETED]](#phase-9--sfu-service-group-calls--completed)
 - [Phase 10 — Recording Service [⏳ PENDING]](#phase-10--recording-service--pending)
 - [Phase 11 — Notification Service [⏳ PENDING]](#phase-11--notification-service--pending)
 - [Phase 12 — Gateway Hardening [⏳ PENDING]](#phase-12--gateway-hardening--pending)
@@ -48,6 +49,7 @@
 - [Phase 14 — CI/CD [⏳ PENDING]](#phase-14--cicd--pending)
 - [Phase 15 — Kubernetes Deployment [⏳ PENDING]](#phase-15--kubernetes-deployment--pending)
 - [Phase 16 — Load Testing &amp; Security [⏳ PENDING]](#phase-16--load-testing--security--pending)
+- [Phase F — Frontend (React App) [⏳ PENDING]](#phase-f--frontend-react-app--pending)
 - [Full Build Order — Architectural Diagram](#full-build-order--architectural-diagram)
 
 ---
@@ -257,7 +259,7 @@ flowchart TD
     S3 --> S4["Step 9.4<br/>Producer: receive each participant's stream"]
     S4 --> S5["Step 9.5<br/>Consumer: forward to every other participant"]
     S5 --> S6["Step 9.6<br/>Signaling calls SFU internal API"]
-    S6 --> S7["Step 9.7<br/>Frontend: switch from mesh to SFU mode at 3+"]
+    S6 --> S7["Step 9.7<br/>Signaling: room mode (sfu default) + frontend uses it"]
     S7 --> S8["Step 9.8<br/>Test with 4-5 participants"]
 ```
 
@@ -331,6 +333,13 @@ flowchart TD
 
 ---
 
+## Phase F — Frontend (React App) [⏳ PENDING]
+
+**Goal:** Full interactive React frontend with mediasoup-client video grid, auth flows, chat panel, room controls, and audio/video settings.
+**Guide:** `FRONTEND/Phase_9_sfu_frontend_guide.md`
+
+---
+
 ## Full Build Order — Architectural Diagram
 
 ```mermaid
@@ -347,7 +356,8 @@ flowchart TD
     P9 --> P10["Phase 10<br/>Recording"]
     P10 --> P11["Phase 11<br/>Notifications"]
     P11 --> P12["Phase 12<br/>Gateway Hardening"]
-    P12 --> P13["Phase 13<br/>Observability"]
+    P12 --> PF["Phase F<br/>Frontend (React)"]
+    PF --> P13["Phase 13<br/>Observability"]
     P13 --> P14["Phase 14<br/>CI/CD"]
     P14 --> P15["Phase 15<br/>Kubernetes"]
     P15 --> P16["Phase 16<br/>Load Test & Security"]
@@ -362,10 +372,11 @@ flowchart TD
     style P6 fill:#e8ffe8,stroke:#3fae3f
     style P7 fill:#e8ffe8,stroke:#3fae3f
     style P8 fill:#e8ffe8,stroke:#3fae3f
-    style P9 fill:#fff4e0,stroke:#d99a2b
+    style P9 fill:#e8ffe8,stroke:#3fae3f
     style P10 fill:#fff4e0,stroke:#d99a2b
     style P11 fill:#fff4e0,stroke:#d99a2b
     style P12 fill:#fff4e0,stroke:#d99a2b
+    style PF fill:#fff4e0,stroke:#d99a2b
     style P13 fill:#fff4e0,stroke:#d99a2b
     style P14 fill:#fff4e0,stroke:#d99a2b
     style P15 fill:#fff4e0,stroke:#d99a2b
