@@ -211,7 +211,7 @@ $('go').onclick = async () => {
       const t = devA.createSendTransport(d);
       wireTransport(t, roomId, A);
       t.on('produce', async ({ kind, rtpParameters, appData }, ok, fail) => {
-        const r = await post('/produce', { roomId, peerId: A, transportId: t.id, kind, rtpParameters, source: appData.source });
+        const r = await post('/produce', { roomId, peerId: A, transportId: t.id, kind, rtpParameters, source: appData.source,userId: 'user-a' });
         r.status === 200 ? ok({ id: r.json.data.producerId }) : fail(new Error('produce ' + r.status));
       });
       return t;
