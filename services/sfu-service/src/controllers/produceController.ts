@@ -6,11 +6,13 @@ import { logger } from '../utils/logger.ts';
 
 export async function produceHandler(req: Request, res: Response, next: NextFunction) {
     try {
-        const { roomId, peerId, transportId, kind, rtpParameters, source } = req.body ?? {};
+        // STEP 1: userId is the new field
+        const { roomId, peerId, transportId, kind, rtpParameters, source, userId  } = req.body ?? {};
 
         if (
             !roomId || !peerId || !transportId ||
             !isValidKind(kind) ||
+            !userId ||
             !isValidSource(source) ||
             !rtpParameters || typeof rtpParameters !== 'object'
         ) {
@@ -25,7 +27,15 @@ export async function produceHandler(req: Request, res: Response, next: NextFunc
             throw new AppError('Peer not found. Create a transport first.', 404);
         }
 
-        const producer = await createProducer(peer, transportId, kind, rtpParameters, source);
+        // STEP 2: only pass userId on when it is a string (Joi already checked it)
+        const producer = await createProducer(
+            peer,
+            transportId,
+            kind,
+            rtpParameters,
+            source,
+            userId,
+        );
 
         res.json({ success: true, data: { producerId: producer.id } });
     } catch (err) {
@@ -35,7 +45,6 @@ export async function produceHandler(req: Request, res: Response, next: NextFunc
         next(err instanceof AppError ? err : new AppError('Failed to produce', 500));
     }
 }
-
 export function listProducersHandler(req: Request, res: Response, next: NextFunction) {
     try {
         const roomId = String(req.params.roomId);

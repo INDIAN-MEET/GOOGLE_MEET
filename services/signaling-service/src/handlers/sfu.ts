@@ -81,7 +81,14 @@ export function registerSfuHandlers(socket: Socket): void {
 
     // STEP 5
     handle(socket, 'produce', async (roomCode, { transportId, kind, rtpParameters, source }) => {
-        const result = await sfu.produce(roomCode, socket.id, transportId, kind, rtpParameters, source);
+        /**
+         * STEP 5a: userId comes from socket.data (set by socketAuth from the JWT).
+         *          Nothing the client sends can change it.
+         */
+        const result = await sfu.produce(
+            roomCode, socket.id, transportId, kind, rtpParameters, source,
+            socket.data.userId as string,                               // STEP 5a
+        );
 
         socket.to(roomCode).emit('new-producer', {
             producerId: result.producerId,

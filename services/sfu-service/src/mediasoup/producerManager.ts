@@ -25,6 +25,7 @@ export async function createProducer(
     kind: mediasoup.types.MediaKind,
     rtpParameters: mediasoup.types.RtpParameters,
     source: ProducerSource,
+    userId?: string,                                                  // STEP 1: new optional argument
 ): Promise<mediasoup.types.Producer> {
     const transport = peer.transports.get(transportId);
 
@@ -48,7 +49,7 @@ export async function createProducer(
         producer = await transport.produce({
             kind,
             rtpParameters,
-            appData: { peerId: peer.id, source },
+            appData: { peerId: peer.id, source, userId },             // STEP 2: the recorder reads this later
         });
     } catch (err: any) {
         logger.error({ err, peerId: peer.id, transportId }, 'transport.produce failed');
@@ -68,7 +69,7 @@ export async function createProducer(
     });
 
     logger.info(
-        { peerId: peer.id, roomId: peer.roomId, producerId: producer.id, kind, source },
+        { peerId: peer.id, roomId: peer.roomId, producerId: producer.id, kind, source, userId },   // STEP 3: shows in the log, used to verify
         'Producer created',
     );
 

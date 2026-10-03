@@ -33,6 +33,9 @@ export const connectTransportSchema = Joi.object({
   dtlsParameters: Joi.object().required(),
 });
 
+/**
+ * STEP 4: userId is optional. A value longer than 128 characters gets a clean 400.
+ */
 export const produceSchema = Joi.object({
   roomId: id,
   peerId: id,
@@ -40,6 +43,7 @@ export const produceSchema = Joi.object({
   kind: Joi.string().valid('audio', 'video').required(),              // STEP 3
   rtpParameters: Joi.object().required(),
   source: Joi.string().valid('camera', 'mic', 'screen').required(),   // STEP 3
+  userId: Joi.string().trim().max(128).optional(),                    // STEP 4
 });
 
 export const consumeSchema = Joi.object({

@@ -76,12 +76,20 @@ export function connectTransport(roomId: string, peerId: string, transportId: st
     );
 }
 
+/**
+ * produce(...)
+ *
+ * STEP 1: userId is the new last argument. It is optional, so older callers still work.
+ * STEP 2: Send it in the body. The SFU stores it on the producer for the recorder.
+ */
 export function produce(
     roomId: string, peerId: string, transportId: string,
     kind: string, rtpParameters: unknown, source: string,
+    userId?: string,                                                    // STEP 1
 ) {
     return request<{ producerId: string }>(
-        'POST', '/produce', { roomId, peerId, transportId, kind, rtpParameters, source },
+        'POST', '/produce',
+        { roomId, peerId, transportId, kind, rtpParameters, source, userId },   // STEP 2
     );
 }
 
