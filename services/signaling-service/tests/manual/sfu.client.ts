@@ -14,15 +14,25 @@ if (!token || !roomCode) {
  * STEP 1: Connect, then call an SFU event BEFORE join-room.
  *         Expect 403 ("Join a room first").
  *
- * STEP 2: join-room, then run the real SFU events through signaling.
+ * STEP 2: join-room, then wait for "joined".
  *
- * STEP 3: Check each answer. A failed check prints FAIL.
+ * STEP 3: Check the joined payload and the room mode.
+ *         3a: "joined" must carry mode = "sfu" or "mesh".
+ *         3b: a second join-room must be refused (join-error).
  *
- * STEP 4: Stay alive. Press Ctrl+C to disconnect, then look at
+ * STEP 4: Run the real SFU events through signaling.
+ *         Every check prints PASS or FAIL.
+ *
+ * STEP 5: Print a summary, then stay alive.
+ *         Press Ctrl+C to disconnect, then look at
  *         "docker compose logs sfu-service" for "Peer removed".
  *         A second client in the same room should log peer-left.
  */
 const socket = io('http://localhost:4004', { auth: { token } });
+
+let passed = 0;
+let failed = 0;
+let started = false; // a reconnect must not run the whole test twice
 
 // ack helper with a 5s timeout so the script never hangs
 const call = (event: string, payload: object = {}) =>
@@ -31,15 +41,34 @@ const call = (event: string, payload: object = {}) =>
         socket.emit(event, payload, (res: any) => { clearTimeout(timer); resolve(res); });
     });
 
-const expect = (name: string, ok: boolean, res: any) =>
+// wait for ONE server push event, or undefined after the timeout
+const waitFor = (event: string, ms = 3000) =>
+    new Promise<any>((resolve) => {
+        function onEvent(data: any) {
+            clearTimeout(timer);
+            resolve(data);
+        }
+        const timer = setTimeout(() => {
+            socket.off(event, onEvent);
+            resolve(undefined);
+        }, ms);
+        socket.once(event, onEvent);
+    });
+
+const expect = (name: string, ok: boolean, res?: any) => {
+    ok ? passed++ : failed++;
     console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}`, ok ? '' : JSON.stringify(res));
+};
 
 socket.on('connect', async () => {
     console.log(`[connected] socket.id = ${socket.id}`);
 
+    if (started) return;
+    started = true;
+
     // STEP 1
-    let r = await call('get-router-capabilities');
-    expect('before join -> 403', r.statusCode === 403, r);
+    const early = await call('get-router-capabilities');
+    expect('before join -> 403', early.statusCode === 403, early);
 
     // STEP 2
     socket.emit('join-room', { roomCode });
@@ -48,7 +77,17 @@ socket.on('connect', async () => {
 socket.on('joined', async (data) => {
     console.log('[joined]', data);
 
-    // STEP 3
+    // STEP 3a
+    expect('joined carries mode', data.mode === 'sfu' || data.mode === 'mesh', data);
+    console.log(`  room mode = ${data.mode}`);
+
+    // STEP 3b
+    const refused = waitFor('join-error');
+    socket.emit('join-room', { roomCode });
+    const msg = await refused;
+    expect('second join refused', typeof msg === 'string' && /Already in a room/.test(msg), msg);
+
+    // STEP 4
     let r = await call('get-router-capabilities');
     expect('router capabilities', r.success === true, r);
 
@@ -70,7 +109,8 @@ socket.on('joined', async (data) => {
     r = await call('consume', { producerId: 'does-not-exist', rtpCapabilities: {} });
     expect('consume unknown producer -> 404', r.statusCode === 404, r);
 
-    console.log('--- done. Press Ctrl+C to test disconnect cleanup ---');
+    // STEP 5
+    console.log(`--- ${passed} passed, ${failed} failed. Press Ctrl+C to test disconnect cleanup ---`);
 });
 
 // push events from the server
@@ -81,5 +121,4 @@ socket.on('producer-closed', (d) => console.log('[producer-closed]', d));
 socket.on('join-error', (m) => console.log('[join-error]', m));
 socket.on('connect_error', (e) => console.log('[connect_error]', e.message));
 
-// STEP 4
 process.stdin.resume();

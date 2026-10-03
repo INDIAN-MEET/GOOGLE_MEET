@@ -96,6 +96,7 @@ services:
     environment:
       - SFU_SERVICE_URL=http://sfu-service:4006
       - INTERNAL_SECRET=${INTERNAL_SECRET}
+      - DEFAULT_ROOM_MODE=sfu          # "sfu" (default) or "mesh" (fallback)
     depends_on:
       - redis
       - room-service

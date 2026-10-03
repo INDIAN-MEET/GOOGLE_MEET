@@ -1,0 +1,8 @@
+docker compose up -d --build signaling-service sfu-service
+docker  logs -f signaling-service
+
+# terminal 1 (host)
+npx tsx tests/manual/sfu.client.ts eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiIzZDI2MDI5ZC04ZDg4LTQwZjUtOTIwMy1hM2Q4ODZiMDk1ZTAiLCJpYXQiOjE3OTEwMTIyNDAsImV4cCI6MTc5MTAxMzE0MH0.7j7mupLouKAOc_LhKVUFCscwDNxIMONEAmZeCfoXTKw 7oz-5wjh-gpu
+
+# terminal 2 (second user, to watch broadcasts)
+npx tsx tests/manual/sfu.client.ts eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI0YTE4ZjA4Mi05OTRiLTRkNGUtYjE1My1kNzYzZjViOTc2YWUiLCJpYXQiOjE3OTEwMTI1MDMsImV4cCI6MTc5MTAxMzQwM30.nFtgzKrAMxFtZ16G5wILpdXxylMAvhwuv5yd7lDR3Vw 7oz-5wjh-gpu
