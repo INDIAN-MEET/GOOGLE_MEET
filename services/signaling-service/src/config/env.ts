@@ -27,3 +27,13 @@ if (INTERNAL_SECRET.length < 16) {                                              
 
 export const SFU_SERVICE_URL: string =                                           // STEP 3
     process.env.SFU_SERVICE_URL || 'http://localhost:4006';
+
+
+/**
+ * STEP 4: DEFAULT_ROOM_MODE decides how NEW rooms start.
+ *         "sfu" (default) = every room uses the SFU.
+ *         "mesh" = old peer-to-peer behaviour (fallback).
+ *         Anything else falls back to "sfu".
+ */
+export const DEFAULT_ROOM_MODE: 'mesh' | 'sfu' =                                 // STEP 4
+    process.env.DEFAULT_ROOM_MODE === 'mesh' ? 'mesh' : 'sfu';

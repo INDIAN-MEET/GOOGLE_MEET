@@ -41,11 +41,21 @@ async function cleanUp(socket: Socket) {
     socket.data.usesSfu = false;
     await socket.leave(roomCode);
 
-    // STEP 3
+    /**
+     * STEP 3: Remove the socket from the Redis members set.
+     *         If it was the LAST member, also delete the room mode key
+     *         so the next group of users starts fresh.
+     *         In its own try/catch so a Redis error cannot block the rest.
+     */
     try {
-        await redis.srem(`room:${roomCode}:members`, socket.id);
+        const setKey = `room:${roomCode}:members`;
+        await redis.srem(setKey, socket.id);
+
+        if ((await redis.scard(setKey)) === 0) {
+            await redis.del(`room:${roomCode}:mode`);
+        }
     } catch (err) {
-        logger.error({ err, roomCode }, 'Redis srem failed');
+        logger.error({ err, roomCode }, 'Redis cleanup failed');
     }
 
     // STEP 4
