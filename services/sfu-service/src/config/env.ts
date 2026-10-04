@@ -17,5 +17,9 @@ export const env = {
   announcedIp: process.env.ANNOUNCED_IP || '127.0.0.1',
   internalSecret,
   devCorsOrigin: process.env.DEV_CORS_ORIGIN ?? 'http://localhost:3000',
-
+  recordingDir: process.env.RECORDING_DIR || '/recordings',
+  recordingServiceUrl: process.env.RECORDING_SERVICE_URL || 'http://recording-service:4007',
+  recordingRtpMin: Number(process.env.RECORDING_RTP_MIN_PORT) || 50000,
+  recordingRtpMax: Number(process.env.RECORDING_RTP_MAX_PORT) || 50200,
+  ffmpegPath: process.env.FFMPEG_PATH || 'ffmpeg',
 };
