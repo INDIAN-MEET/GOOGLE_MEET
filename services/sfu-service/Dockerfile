@@ -21,7 +21,9 @@ FROM node:22-bookworm-slim
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ffmpeg \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && mkdir -p /recordings \
+    && chown node:node /recordings
 
 ENV NODE_ENV=production
 WORKDIR /app

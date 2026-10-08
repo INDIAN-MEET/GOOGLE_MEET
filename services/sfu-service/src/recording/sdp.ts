@@ -38,7 +38,7 @@ export function buildSdp(medias: SdpMedia[]): string {
 
   for (const m of medias) {
     // STEP 3: pick the real codec, skipping rtx
-    const codec = m.rtpParameters.codecs.find((c:any) => !/\/rtx$/i.test(c.mimeType));
+    const codec = m.rtpParameters.codecs.find((c) => !/\/rtx$/i.test(c.mimeType));
     if (!codec) throw new Error(`No usable codec for ${m.kind}`);
 
     const name = codec.mimeType.split('/')[1];   // "video/VP8" -> "VP8"

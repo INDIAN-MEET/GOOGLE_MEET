@@ -12,7 +12,6 @@ export async function produceHandler(req: Request, res: Response, next: NextFunc
         if (
             !roomId || !peerId || !transportId ||
             !isValidKind(kind) ||
-            !userId ||
             !isValidSource(source) ||
             !rtpParameters || typeof rtpParameters !== 'object'
         ) {
@@ -27,14 +26,14 @@ export async function produceHandler(req: Request, res: Response, next: NextFunc
             throw new AppError('Peer not found. Create a transport first.', 404);
         }
 
-        // STEP 2: only pass userId on when it is a string (Joi already checked it)
+        // STEP 2: pass userId when string
         const producer = await createProducer(
             peer,
             transportId,
             kind,
             rtpParameters,
             source,
-            userId,
+            typeof userId === 'string' ? userId : undefined,
         );
 
         res.json({ success: true, data: { producerId: producer.id } });

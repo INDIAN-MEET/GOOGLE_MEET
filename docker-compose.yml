@@ -133,6 +133,12 @@ services:
       # - INTERNAL_SECRET=${INTERNAL_SECRET} # uncomment once Step 10 (authGuard) is implemented; set INTERNAL_SECRET in a root .env (gitignored)
       - INTERNAL_SECRET=${INTERNAL_SECRET}
       - DEV_CORS_ORIGIN=http://localhost:3000
+      - RECORDING_DIR=/recordings
+      - RECORDING_SERVICE_URL=http://recording-service:4007
+      - RECORDING_RTP_MIN_PORT=50000
+      - RECORDING_RTP_MAX_PORT=50200
+    volumes:
+      - recordings_data:/recordings
   # ==========================================================================
   # NAT TRAVERSAL — STUN/TURN (Phase 7)
   # ==========================================================================
@@ -153,3 +159,4 @@ services:
 volumes:
   postgres_data:
   mongo_data:
+  recordings_data:

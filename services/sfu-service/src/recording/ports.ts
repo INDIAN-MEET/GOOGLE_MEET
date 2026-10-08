@@ -21,7 +21,7 @@ import { env } from '../config/env.ts';
  */
 
 // STEP 1: ports that are currently taken
-const used = new Set<Number>()
+const used = new Set<number>()
 
 // STEP 2: if the configured minimum is odd, move up by one so we start on an even port
 const start =
