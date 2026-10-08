@@ -53,6 +53,17 @@ export function getPeerCount(roomId: string): number {
     return peerCount ?? 0
 }
 
+/**
+ * listPeerIds(roomId)
+ *
+ * STEP 1: Return the ids of all peers currently in the room.
+ *         Empty array if the room does not exist.
+ *         The recording manager uses it to start segments for peers
+ *         who joined BEFORE the recording started.
+ */
+export function listPeerIds(roomId: string): string[] {
+    return [...(rooms.get(roomId)?.keys() ?? [])];
+}
 
 
 export interface ProducerInfo {
