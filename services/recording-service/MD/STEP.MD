@@ -40,7 +40,7 @@
 | 10.0 | Merge Phase 9, create the branch                                        |              ✅ Done              |
 | 10.1 | Infra:`recording_db`, FFmpeg in the SFU image, `/recordings` volume |              ✅ Done              |
 | 10.2 | `userId` in SFU producers                                             |              ✅ Done              |
-| 10.3 | SFU recorder module                                                     | ⏳**10.3.1 now**, rest next |
+| 10.3 | SFU recorder module                                                     |              ✅ Done              |
 | 10.4 | Test the SFU recorder alone                                             |                ⏳                |
 | 10.5 | recording-service: skeleton, database, start/stop API, webhook          |                ⏳                |
 | 10.6 | BullMQ finalize worker (MKV → MP4)                                     |                ⏳                |
