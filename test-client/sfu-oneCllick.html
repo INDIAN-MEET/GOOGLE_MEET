@@ -590,12 +590,14 @@
         const a = new mc.Device();
         const b = new mc.Device();
 
+        const routerRtpCapabilities = caps.routerRtpCapabilities ?? caps;
+
         await a.load({
-          routerRtpCapabilities: caps
+          routerRtpCapabilities
         });
 
         await b.load({
-          routerRtpCapabilities: caps
+          routerRtpCapabilities
         });
 
         if (!a.canProduce('video')) {
