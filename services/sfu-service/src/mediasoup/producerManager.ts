@@ -2,6 +2,7 @@ import * as mediasoup from 'mediasoup';
 import { logger } from '../utils/logger.ts';
 import AppError from '../utils/AppError.ts';
 import type { Peer } from './peerManager.ts';
+import { notifyProducersChanged } from '../recording/recordingManager.ts';
 
 export type ProducerSource = 'camera' | 'mic' | 'screen';
 
@@ -19,14 +20,31 @@ export function isValidKind(value: unknown): value is mediasoup.types.MediaKind 
     return value === 'audio' || value === 'video';
 }
 
+/**
+ * createProducer(...)
+ *
+ * STEP 1: Find the send transport and check the rules (direction, source/kind).
+ *
+ * STEP 2: Create the producer. userId goes into appData for the recorder.
+ *
+ * STEP 3: Save it in the peer map and keep the map in sync on close.
+ *
+ * STEP 4 (NEW): Tell the recording manager that this peer's producers changed.
+ *         It does nothing if the room is not being recorded.
+ *         It waits 700 ms first, so camera + mic become ONE sync.
+ *
+ * STEP 5 (NEW): Same call when a producer closes (camera off, screen share
+ *         stopped, transport closed). The manager then restarts or ends the segment.
+ */
 export async function createProducer(
     peer: Peer,
     transportId: string,
     kind: mediasoup.types.MediaKind,
     rtpParameters: mediasoup.types.RtpParameters,
     source: ProducerSource,
-    userId?: string,                                                  // STEP 1: new optional argument
+    userId?: string,
 ): Promise<mediasoup.types.Producer> {
+    // STEP 1
     const transport = peer.transports.get(transportId);
 
     if (!transport) {
@@ -43,35 +61,40 @@ export async function createProducer(
         throw new AppError(`Source "${source}" requires kind "${SOURCE_KIND[source]}"`, 400);
     }
 
+    // STEP 2
     let producer: mediasoup.types.Producer;
 
     try {
         producer = await transport.produce({
             kind,
             rtpParameters,
-            appData: { peerId: peer.id, source, userId },             // STEP 2: the recorder reads this later
+            appData: { peerId: peer.id, source, userId },
         });
     } catch (err: any) {
         logger.error({ err, peerId: peer.id, transportId }, 'transport.produce failed');
         throw new AppError('Failed to create producer (invalid rtpParameters?)', 400);
     }
 
+    // STEP 3
     peer.producers.set(producer.id, producer);
-    // Transport closed -> mediasoup closes the producer itself. Log only.
+
     producer.on('transportclose', () => {
         logger.info({ peerId: peer.id, producerId: producer.id }, 'Producer transport closed');
     });
 
-    // Single place that keeps our map in sync
+
     producer.observer.on('close', () => {
         peer.producers.delete(producer.id);
         logger.info({ peerId: peer.id, producerId: producer.id, source }, 'Producer closed');
+        notifyProducersChanged(peer.roomId, peer.id);                 // STEP 5
     });
 
     logger.info(
-        { peerId: peer.id, roomId: peer.roomId, producerId: producer.id, kind, source, userId },   // STEP 3: shows in the log, used to verify
+        { peerId: peer.id, roomId: peer.roomId, producerId: producer.id, kind, source, userId },
         'Producer created',
     );
+
+    notifyProducersChanged(peer.roomId, peer.id);                     // STEP 4
 
     return producer;
 }

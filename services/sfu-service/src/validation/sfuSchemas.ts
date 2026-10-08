@@ -12,6 +12,11 @@ import Joi from 'joi';
  *
  * STEP 3: Allowed values (direction, kind, source) are listed with
  *         .valid(), so "sideways" gives a clean 400.
+ *
+ * STEP 4: userId is optional. A value longer than 128 characters gets a clean 400.
+ *
+ * STEP 5 (NEW): recordingId becomes a folder name on disk, so only letters,
+ *         numbers, "-" and "_" are allowed (same rule as in recordingManager).
  */
 const id = Joi.string().trim().min(1).max(128).required();            // STEP 1
 
@@ -33,9 +38,6 @@ export const connectTransportSchema = Joi.object({
   dtlsParameters: Joi.object().required(),
 });
 
-/**
- * STEP 4: userId is optional. A value longer than 128 characters gets a clean 400.
- */
 export const produceSchema = Joi.object({
   roomId: id,
   peerId: id,
@@ -62,4 +64,15 @@ export const resumeConsumerSchema = Joi.object({
 export const leavePeerSchema = Joi.object({
   roomId: id,
   peerId: id,
+});
+
+// STEP 5
+export const startRecordingSchema = Joi.object({
+  roomId: id,
+  recordingId: Joi.string().pattern(/^[\w-]{1,128}$/).required(),
+});
+
+export const stopRecordingSchema = Joi.object({
+  roomId: id,
+  reason: Joi.string().trim().max(64).optional(),
 });

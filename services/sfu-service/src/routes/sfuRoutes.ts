@@ -4,11 +4,13 @@ import { createTransportHandler, connectTransportHandler } from '../controllers/
 import { produceHandler, listProducersHandler } from '../controllers/produceController.ts';
 import { consumeHandler, resumeConsumerHandler } from '../controllers/consumeController.ts';
 import { leavePeerHandler } from '../controllers/peerController.ts';
+import { startRecordingHandler, stopRecordingHandler } from '../controllers/recordingController.ts';
 import { validate } from '../middleware/validate.ts';
 import {
   roomParamsSchema, producersQuerySchema, createTransportSchema,
   connectTransportSchema, produceSchema, consumeSchema,
   resumeConsumerSchema, leavePeerSchema,
+  startRecordingSchema, stopRecordingSchema,
 } from '../validation/sfuSchemas.ts';
 
 /**
@@ -18,26 +20,22 @@ import {
  *         authGuard, so every route below already needs the secret.
  *
  * STEP 2: On every route, validate(...) runs BEFORE the controller.
- *         Bad input stops there with a 400, so the controller only
- *         sees data of the right shape.
- *         - validate(schema)            -> checks req.body
- *         - validate(schema, 'params')  -> checks the URL part (:roomId)
- *         - validate(schema, 'query')   -> checks ?exceptPeerId=...
+ *         Bad input stops there with a 400.
  *
  * STEP 3: Router capabilities. Only :roomId is checked.
  *
- * STEP 4: Transports. Create needs roomId, peerId, direction.
- *         Connect needs transportId and dtlsParameters too.
+ * STEP 4: Transports (create, connect).
  *
  * STEP 5: Produce and list producers.
- *         The list route checks both the URL param and the query string.
  *
- * STEP 6: Consume and resume. Both are called by the receiving peer.
+ * STEP 6: Consume and resume.
  *
- * STEP 7: Peer leave. Called by Signaling on leave-room and disconnect.
- *         It is idempotent, so a peer that is already gone still gets 200.
+ * STEP 7: Peer leave. Idempotent.
  *
- * STEP 8: Export the router.
+ * STEP 8 (NEW): Recording start and stop. Called by recording-service
+ *         (internal only, same secret as everything else).
+ *
+ * STEP 9: Export the router.
  */
 
 // STEP 1
@@ -71,4 +69,8 @@ router.post('/consumer/resume', validate(resumeConsumerSchema), resumeConsumerHa
 router.post('/peers/leave', validate(leavePeerSchema), leavePeerHandler);
 
 // STEP 8
+router.post('/recordings/start', validate(startRecordingSchema), startRecordingHandler);
+router.post('/recordings/stop', validate(stopRecordingSchema), stopRecordingHandler);
+
+// STEP 9
 export default router;
