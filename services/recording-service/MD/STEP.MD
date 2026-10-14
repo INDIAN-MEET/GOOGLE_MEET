@@ -1373,6 +1373,8 @@ The webhook will fail with retries now, because recording-service does not exist
 
 **If something fails **
 
+
+
 | Symptom                                               | Likely cause                          | What to do                                                                                                                                        |
 | :---------------------------------------------------- | :------------------------------------ | :------------------------------------------------------------------------------------------------------------------------------------------------ |
 | File is 0 bytes                                       | FFmpeg got no RTP                     | Check the SDP file next to the`.mkv`: the port and payload type must match. Look at `docker compose logs sfu-service` for `ffmpeg` warnings |
