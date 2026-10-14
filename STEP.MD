@@ -1,7 +1,8 @@
 # Video Meet App — Detailed File-by-File Build Steps & Execution Checklist
 
 > **Current Implementation Status:** Phases 0 through 9 are **✅ COMPLETED**.
-> Phases 10 through 16 and Phase F are **⏳ NEXT / PENDING**.
+> Phase 10 is **🟡 IN PROGRESS** (Steps 10.1–10.4 done).
+> Phases 11 through 16 and Phase F are **⏳ NEXT / PENDING**.
 
 ---
 
@@ -19,7 +20,7 @@
 | **Phase 7**  | **TURN/STUN**            | ✅ COMPLETED | Coturn container (`infra/coturn/turnserver.conf`) & HMAC credentials endpoint.                         |
 | **Phase 8**  | **Chat Service**         | ✅ COMPLETED | Port 4005. MongoDB Mongoose schema, Redis subscriber to`chat-message`, history REST API.               |
 | **Phase 9**  | **SFU Service**          | ✅ COMPLETED | Backend service complete: mediasoup workers, routers, transports, producers, consumers, auth, signaling integration & room mode. Frontend in Phase F. |
-| **Phase 10** | **Recording Service**    |  ⏳ PENDING  | FFmpeg + BullMQ worker queue for async video call recordings.                                            |
+| **Phase 10** | **Recording Service**    | 🟡 IN PROGRESS | Steps 10.1–10.4 completed (Infra, SFU recorder module, isolated SFU recording test). Next: Step 10.5 recording-service. |
 | **Phase 11** | **Notification Service** |  ⏳ PENDING  | Nodemailer / email worker for scheduled invites & meeting reminders.                                     |
 | **Phase 12** | **Gateway Hardening**    |  ⏳ PENDING  | Rate limiting (`express-rate-limit`) & centralized error handler validation.                           |
 | **Phase 13** | **Observability**        |  ⏳ PENDING  | Prometheus`/metrics`, Grafana dashboards & OpenTelemetry tracing.                                      |
@@ -273,7 +274,7 @@ flowchart TD
 
 ---
 
-## Phase 10 — Recording Service [⏳ PENDING]
+## Phase 10 — Recording Service [🟡 IN PROGRESS]
 
 **Goal:** Downloadable video recordings produced asynchronously post-call.
 

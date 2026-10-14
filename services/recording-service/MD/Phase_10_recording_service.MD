@@ -1,7 +1,7 @@
 
 # Phase 10 — Recording Service: Design, Contracts & Build Guide
 
-> **Status:** ⏳ Not started. Phase 9 (SFU) is complete, so this is the next backend phase.
+> **Status:** 🟡 In Progress. Steps 10.1 to 10.4 are complete (Infra, SFU recorder module, isolated SFU recording test). Next: Step 10.5 recording-service.
 > **Goal:** the host presses Record, the call is captured on the server, and after the call the host gets downloadable MP4 files.
 > **How to use this file:** it holds the design, the contracts (API, events, DB) and the critical code. The full code for each step is written step by step while you build, the same way as Phase 9.
 

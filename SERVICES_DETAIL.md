@@ -10,9 +10,9 @@
 According to the master implementation plan in [`STEP.MD`](file:///c:/Users/swaru/OneDrive/Desktop/PROJECT/GOOGLE_MEET/STEP.MD), the project follows a **16-Phase Microservices Build Order**. 
 
 ### Status Overview
-* **Phases 0 through 8** are **COMPLETED** (Infrastructure, API Gateway, Auth, User, Room, Signaling, WebRTC Verification Client, STUN/TURN, and Chat Services).
-* **Phase 9** (SFU Service) has a folder skeleton created, awaiting `mediasoup` implementation.
-* **Phases 10 through 16** are pending implementation.
+* **Phases 0 through 9** are **COMPLETED** (Infrastructure, API Gateway, Auth, User, Room, Signaling, WebRTC Verification Client, STUN/TURN, Chat, and SFU mediasoup Services).
+* **Phase 10** (Recording Service) is **IN PROGRESS** (Steps 10.1–10.4 completed: Infra, SFU recorder module, test client controls).
+* **Phases 11 through 16** are pending implementation.
 
 | Phase | Service / Component | Status | Storage / Tech Stack | Primary Responsibility |
 | :--- | :--- | :---: | :--- | :--- |
@@ -25,8 +25,8 @@ According to the master implementation plan in [`STEP.MD`](file:///c:/Users/swar
 | **Phase 6** | **WebRTC Verification** | ✅ Completed | Vanilla JS, WebRTC (`getUserMedia`) | 1:1 call testing tool in `test-client/` |
 | **Phase 7** | **TURN/STUN Infra** | ✅ Completed | Coturn (`turnserver.conf`), Auth HMAC | NAT traversal relay for cross-network media streaming |
 | **Phase 8** | **Chat Service** | ✅ Completed | MongoDB (`chat_db`), Mongoose, Redis | Async persistent room messaging & history retrieval |
-| **Phase 9** | **SFU Service** | ⏳ Skeleton Only | `mediasoup` (Planned) | Multi-party group video calls (3+ participants) |
-| **Phase 10**| **Recording Service** | ❌ Pending | FFmpeg, BullMQ, AWS S3 / Blob | Async video recording of meetings |
+| **Phase 9** | **SFU Service** | ✅ Completed | `mediasoup`, Node.js | Multi-party group video calls (3+ participants) |
+| **Phase 10**| **Recording Service** | 🟡 In Progress | FFmpeg, BullMQ, Postgres (`recording_db`) | Steps 10.1–10.4 done (SFU recorder & test client). Next: Step 10.5 |
 | **Phase 11**| **Notification Service**| ❌ Pending | Nodemailer, Redis Queue | Email invites and scheduled reminders |
 | **Phase 12**| **Gateway Hardening** | ⏳ Partial | `express-rate-limit` | Throttling, centralized validation & security |
 | **Phase 13**| **Observability** | ⏳ Partial | Pino HTTP (Prometheus/Grafana planned) | Structured logging, metrics & tracing |
