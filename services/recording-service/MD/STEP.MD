@@ -1370,7 +1370,7 @@ The webhook will fail with retries now, because recording-service does not exist
 - Run Part 1b five times in a row (new page load each time): no `No free recording RTP port` (ports are freed).
 - Commit: `phase-10: step 4 sfu recording test`
 
-**If something fails**
+**If something fails **
 
 | Symptom                                               | Likely cause                          | What to do                                                                                                                                        |
 | :---------------------------------------------------- | :------------------------------------ | :------------------------------------------------------------------------------------------------------------------------------------------------ |
