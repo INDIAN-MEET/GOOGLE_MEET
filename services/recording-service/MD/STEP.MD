@@ -1362,7 +1362,8 @@ The webhook will fail with retries now, because recording-service does not exist
 
 **Done when**
 
-- Part 4 shows 7/7 green.
+- Part 4 shows 7/7 green. ✅ Added automated 7-step test button to `sfu-oneCllick.html`.
+- Status route `GET /recordings/:roomId/status` verified live on SFU container: `{ success: true, data: { active: false, segments: 0 } }`.
 - The `.mkv` plays in VLC with video **and** audio. Clap once: picture and sound line up.
 - `ffprobe` lists one video stream and one audio stream.
 - `docker compose exec sfu-service ps aux` shows **no** leftover `ffmpeg`.
