@@ -4,7 +4,11 @@ import { createTransportHandler, connectTransportHandler } from '../controllers/
 import { produceHandler, listProducersHandler } from '../controllers/produceController.ts';
 import { consumeHandler, resumeConsumerHandler } from '../controllers/consumeController.ts';
 import { leavePeerHandler } from '../controllers/peerController.ts';
-import { startRecordingHandler, stopRecordingHandler } from '../controllers/recordingController.ts';
+import {
+  startRecordingHandler,
+  stopRecordingHandler,
+  recordingStatusHandler,
+} from '../controllers/recordingController.ts';
 import { validate } from '../middleware/validate.ts';
 import {
   roomParamsSchema, producersQuerySchema, createTransportSchema,
@@ -32,7 +36,7 @@ import {
  *
  * STEP 7: Peer leave. Idempotent.
  *
- * STEP 8 (NEW): Recording start and stop. Called by recording-service
+ * STEP 8: Recording start, stop, and status. Called by recording-service
  *         (internal only, same secret as everything else).
  *
  * STEP 9: Export the router.
@@ -71,6 +75,11 @@ router.post('/peers/leave', validate(leavePeerSchema), leavePeerHandler);
 // STEP 8
 router.post('/recordings/start', validate(startRecordingSchema), startRecordingHandler);
 router.post('/recordings/stop', validate(stopRecordingSchema), stopRecordingHandler);
+router.get(
+  '/recordings/:roomId/status',
+  validate(roomParamsSchema, 'params'),
+  recordingStatusHandler,
+);
 
 // STEP 9
 export default router;

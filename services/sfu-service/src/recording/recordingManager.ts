@@ -216,7 +216,7 @@ async function syncPeer(rec: ActiveRecording, peerId: string): Promise<void> {
 export async function startRecording(
   roomId: string,
   recordingId: string,
-): Promise<{ recordingId: string; startedAtMs: number }> {
+): Promise<{ recordingId: string; startedAtMs: number; segments: number }> {
   // STEP 1
   if (!/^[\w-]{1,128}$/.test(recordingId)) {
     throw new AppError('Invalid recordingId', 400);
@@ -254,8 +254,8 @@ export async function startRecording(
   // STEP 6
   await Promise.all(listPeerIds(roomId).map((id) => enqueue(rec, () => syncPeer(rec, id))));
 
-  logger.info({ roomId, recordingId }, 'Recording started');
-  return { recordingId, startedAtMs: rec.startedAtMs };
+  logger.info({ roomId, recordingId, segments: rec.active.size }, 'Recording started');
+  return { recordingId, startedAtMs: rec.startedAtMs, segments: rec.active.size };
 }
 
 /**
@@ -381,4 +381,18 @@ export function isRecording(roomId: string): boolean {
 /** The recordingId of this room's running recording, if any. */
 export function getRecordingId(roomId: string): string | undefined {
   return recordings.get(roomId)?.recordingId;
+}
+
+export interface RecordingStatus {
+  active: boolean;
+  recordingId?: string;
+  segments: number;
+}
+
+/** Detailed status of a room's recording for health checks & recovery. */
+export function getRecordingStatus(roomId: string): RecordingStatus {
+  const rec = recordings.get(roomId);
+  return rec
+    ? { active: true, recordingId: rec.recordingId, segments: rec.active.size }
+    : { active: false, segments: 0 };
 }

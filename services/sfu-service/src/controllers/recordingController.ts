@@ -1,7 +1,7 @@
 import type { Request, Response, NextFunction } from 'express';
 import AppError from '../utils/AppError.ts';
 import { logger } from '../utils/logger.ts';
-import { startRecording, stopRecording } from '../recording/recordingManager.ts';
+import { startRecording, stopRecording, getRecordingStatus } from '../recording/recordingManager.ts';
 
 /**
  * startRecordingHandler   -> POST /api/v1/sfu/recordings/start
@@ -11,13 +11,13 @@ import { startRecording, stopRecording } from '../recording/recordingManager.ts'
  * STEP 2: startRecording() throws 404 (room missing), 409 (already recording)
  *         or 400 (bad recordingId). AppError keeps its status code.
  *
- * STEP 3: Respond 200 with { recordingId, startedAtMs }.
+ * STEP 3: Respond 200 with { started: true, recordingId, startedAtMs, segments }.
  */
 export async function startRecordingHandler(req: Request, res: Response, next: NextFunction) {
     try {
         const { roomId, recordingId } = req.body;                          // STEP 1
         const data = await startRecording(roomId, recordingId);            // STEP 2
-        res.status(200).json({ success: true, data });                     // STEP 3
+        res.status(200).json({ success: true, data: { started: true, ...data } }); // STEP 3
     } catch (err) {
         if (!(err instanceof AppError)) {
             logger.error({ err }, 'Failed to start recording');
@@ -36,8 +36,8 @@ export async function startRecordingHandler(req: Request, res: Response, next: N
  *         No recording for this room -> returns undefined.
  *
  * STEP 3: Respond 200 either way (idempotent).
- *         stopped = true  -> we stopped a real recording.
- *         stopped = false -> nothing was running, nothing to do.
+ *         stopped/stopping = true  -> we stopped a real recording.
+ *         stopped/stopping = false -> nothing was running, nothing to do.
  */
 export async function stopRecordingHandler(req: Request, res: Response, next: NextFunction) {
     try {
@@ -46,12 +46,32 @@ export async function stopRecordingHandler(req: Request, res: Response, next: Ne
 
         res.status(200).json({                                             // STEP 3
             success: true,
-            data: result ? { stopped: true, ...result } : { stopped: false },
+            data: result
+                ? { stopped: true, stopping: true, ...result }
+                : { stopped: false, stopping: false },
         });
     } catch (err) {
         if (!(err instanceof AppError)) {
             logger.error({ err }, 'Failed to stop recording');
         }
         next(err instanceof AppError ? err : new AppError('Failed to stop recording', 500));
+    }
+}
+
+/**
+ * recordingStatusHandler   -> GET /api/v1/sfu/recordings/:roomId/status
+ *
+ * Used by recording-service for health checks and crash recovery.
+ */
+export function recordingStatusHandler(req: Request, res: Response, next: NextFunction) {
+    try {
+        const roomId = String(req.params.roomId);
+        const data = getRecordingStatus(roomId);
+        res.status(200).json({ success: true, data });
+    } catch (err) {
+        if (!(err instanceof AppError)) {
+            logger.error({ err }, 'Failed to read recording status');
+        }
+        next(err instanceof AppError ? err : new AppError('Failed to read recording status', 500));
     }
 }

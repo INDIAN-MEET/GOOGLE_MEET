@@ -296,6 +296,7 @@
     />
 
     <button id="go">1. Run full test</button>
+    <button id="rec" class="ghost" disabled>1b. Test recording (Step 10.4)</button>
     <button id="stop" class="ghost" disabled>2. Test leave + cleanup</button>
     <button id="auth" class="ghost">3. Test auth (Step 10)</button>
   </div>
@@ -441,11 +442,21 @@
     'API without secret is rejected (401)',
     'API with wrong secret is rejected (401)',
     'API with correct secret works (200)',
-    'Bad input gets a clean 400'
+    'Bad input gets a clean 400',
+
+    // Part 4 – recording (Step 10.4)
+    'Start recording (200, 1 segment)',
+    'Status says active (200)',
+    'Second start is rejected (409)',
+    'Record for 10 seconds',
+    'Stop recording (200)',
+    'Second stop is idempotent (200)',
+    'Status says not active'
   ];
 
   const PART2_START = 10;
   const PART3_START = 16;
+  const PART4_START = 21;
 
   const pathEl = $('path');
 
@@ -457,7 +468,9 @@
           ? '<li class="sep">Part 2 – leave and cleanup (Step 9)</li>'
           : index === PART3_START
             ? '<li class="sep">Part 3 – internal auth (Step 10)</li>'
-            : '';
+            : index === PART4_START
+              ? '<li class="sep">Part 4 – recording (Step 10.4)</li>'
+              : '';
 
     return `${separator}
       <li id="s${index}">
@@ -835,6 +848,7 @@
     } finally {
       $('go').disabled = false;
       $('stop').disabled = !S.roomId;
+      $('rec').disabled = !S.roomId;
     }
   };
 
@@ -1304,6 +1318,88 @@
 
     } finally {
       $('auth').disabled = false;
+    }
+  };
+
+  /*
+   * PART 4
+   * Automated recording test (Step 10.4).
+   */
+  async function testRecording() {
+    const { roomId } = S;
+    if (!roomId) throw new Error('Run Part 1 first');
+
+    const recordingId = crypto.randomUUID();
+    S.recordingId = recordingId;
+    log('Recording id: ' + recordingId);
+
+    // STEP 1: Start recording
+    await step(PART4_START, async () => {
+      const r = await post('/recordings/start', { roomId, recordingId });
+      check(r.status === 200, 'expected 200, got ' + r.status + (r.json?.message ? ' – ' + r.json.message : ''));
+      check(r.json?.data?.segments >= 1, 'expected at least 1 segment, got ' + r.json?.data?.segments);
+    });
+
+    // STEP 2: Status says active
+    await step(PART4_START + 1, async () => {
+      const r = await get(`/recordings/${roomId}/status`);
+      check(r.json?.data?.active === true && r.json.data.recordingId === recordingId, 'status is not active');
+    });
+
+    // STEP 3: Duplicate start is rejected (409)
+    await step(PART4_START + 2, async () => {
+      const r = await post('/recordings/start', { roomId, recordingId: crypto.randomUUID() });
+      check(r.status === 409, 'expected 409, got ' + r.status);
+    });
+
+    // STEP 4: Record for 10 seconds (countdown in log)
+    await step(PART4_START + 3, async () => {
+      for (let i = 10; i > 0; i--) {
+        log('  recording... ' + i + 's left');
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+      }
+    });
+
+    // STEP 5: Stop recording
+    await step(PART4_START + 4, async () => {
+      const r = await post('/recordings/stop', { roomId, reason: 'test-stop' });
+      check(r.status === 200, 'expected 200 stopping, got ' + r.status);
+    });
+
+    // STEP 6: Stop again is idempotent (200)
+    await step(PART4_START + 5, async () => {
+      const r = await post('/recordings/stop', { roomId, reason: 'test-stop-duplicate' });
+      check(r.status === 200, 'expected 200, got ' + r.status);
+    });
+
+    // STEP 7: Status says not active
+    await step(PART4_START + 6, async () => {
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+      const r = await get(`/recordings/${roomId}/status`);
+      check(r.json?.data?.active === false, 'recording is still active');
+    });
+  }
+
+  $('rec').onclick = async () => {
+    $('rec').disabled = true;
+
+    for (let i = PART4_START; i < STEPS.length; i++) {
+      mark(i, '', '');
+    }
+
+    $('verdict').className = 'verdict';
+    $('verdict').textContent = '';
+
+    try {
+      await testRecording();
+      $('verdict').className = 'verdict ok';
+      $('verdict').textContent = 'Part 4 passed (7/7). Now inspect the recorded files.';
+      log('Files: docker compose exec sfu-service ls -lh /recordings/' + S.recordingId + '/raw');
+    } catch (error) {
+      $('verdict').className = 'verdict bad';
+      $('verdict').textContent = 'Recording test failed. Details are in the list and log.';
+    } finally {
+      $('rec').disabled = false;
     }
   };
 </script>
