@@ -1,7 +1,7 @@
 
 # Phase 10 — Recording Service: Design, Contracts & Build Guide
 
-> **Status:** 🟡 In Progress. Steps 10.1 to 10.4 are complete (Infra, SFU recorder module, isolated SFU recording test). Next: Step 10.5 recording-service.
+> **Status:** 🟡 In Progress. Steps 10.1 to 10.4 are complete (Infra, SFU recorder module, isolated SFU recording test). Step 10.5 in progress (skeleton, Prisma models & migration for recording_db completed). Next: Step 10.5 business logic & routes.
 > **Goal:** the host presses Record, the call is captured on the server, and after the call the host gets downloadable MP4 files.
 > **How to use this file:** it holds the design, the contracts (API, events, DB) and the critical code. The full code for each step is written step by step while you build, the same way as Phase 9.
 
@@ -892,9 +892,9 @@ docker compose logs sfu-service | findstr /i "webhook ffmpeg"     # the webhook 
 
 **Goal:** a service that owns the product logic: who may record, the database rows, the lock, and the calls to the SFU.
 
-1. Create the folder, `package.json` (`"type": "module"`), `tsconfig.json`, and install: `express prisma @prisma/client bullmq ioredis jsonwebtoken axios joi pino helmet dotenv`. Copy `AppError`, `logger`, `errorHandler`, `validate` from another service.
-2. Add `prisma/schema.prisma` (section 4.7) and run `npx prisma migrate dev --name init`.
-3. **`config/env.ts`**: `PORT=4007`, `DATABASE_URL`, `REDIS_URL`, `JWT_ACCESS_SECRET`, `ROOM_SERVICE_URL`, `SFU_SERVICE_URL`, `INTERNAL_SECRET` (at least 16 characters, fail at startup), `RECORDING_DIR`, `STORAGE_DRIVER`, `FINALIZE_CONCURRENCY`, `MAX_RECORDING_MINUTES`, `RAW_RETENTION_HOURS`.
+1. [x] **Create folder & scaffold:** `package.json` (`"type": "module"`), `tsconfig.json`, install dependencies (`express`, `prisma`, `@prisma/client`, `bullmq`, `ioredis`, `jsonwebtoken`, `axios`, `joi`, `pino`, `dotenv`, etc.).
+2. [x] **Database schema & migration:** Add `prisma/schema.prisma` (`Recording` & `RecordingSegment` models) and run `npx prisma migrate dev --name init`.
+3. [ ] **`config/env.ts`**: `PORT=4007`, `DATABASE_URL`, `REDIS_URL`, `JWT_ACCESS_SECRET`, `ROOM_SERVICE_URL`, `SFU_SERVICE_URL`, `INTERNAL_SECRET` (at least 16 characters, fail at startup), `RECORDING_DIR`, `STORAGE_DRIVER`, `FINALIZE_CONCURRENCY`, `MAX_RECORDING_MINUTES`, `RAW_RETENTION_HOURS`.
 4. **`middleware/authGuard.ts`**: verify the user JWT with `JWT_ACCESS_SECRET` (same approach as signaling's `socketAuth`), set `req.userId`.
 5. **`middleware/internalGuard.ts`**: copy the SFU `authGuard` (SHA-256 + `timingSafeEqual`).
 6. **`config/sfuClient.ts`**: `startCapture`, `stopCapture`, `captureStatus`. Same style as signaling's `sfuClient.ts` (secret header, 5 s timeout, errors keep the status).

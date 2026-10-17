@@ -11,7 +11,7 @@ According to the master implementation plan in [`STEP.MD`](file:///c:/Users/swar
 
 ### Status Overview
 * **Phases 0 through 9** are **COMPLETED** (Infrastructure, API Gateway, Auth, User, Room, Signaling, WebRTC Verification Client, STUN/TURN, Chat, and SFU mediasoup Services).
-* **Phase 10** (Recording Service) is **IN PROGRESS** (Steps 10.1–10.4 completed: Infra, SFU recorder module, test client controls).
+* **Phase 10** (Recording Service) is **IN PROGRESS** (Steps 10.1–10.4 completed; Step 10.5 skeleton and database models migrated to recording_db).
 * **Phases 11 through 16** are pending implementation.
 
 | Phase | Service / Component | Status | Storage / Tech Stack | Primary Responsibility |
@@ -26,7 +26,7 @@ According to the master implementation plan in [`STEP.MD`](file:///c:/Users/swar
 | **Phase 7** | **TURN/STUN Infra** | ✅ Completed | Coturn (`turnserver.conf`), Auth HMAC | NAT traversal relay for cross-network media streaming |
 | **Phase 8** | **Chat Service** | ✅ Completed | MongoDB (`chat_db`), Mongoose, Redis | Async persistent room messaging & history retrieval |
 | **Phase 9** | **SFU Service** | ✅ Completed | `mediasoup`, Node.js | Multi-party group video calls (3+ participants) |
-| **Phase 10**| **Recording Service** | 🟡 In Progress | FFmpeg, BullMQ, Postgres (`recording_db`) | Steps 10.1–10.4 done (SFU recorder, status API & test client). Next: Step 10.5 |
+| **Phase 10**| **Recording Service** | 🟡 In Progress | FFmpeg, BullMQ, Postgres (`recording_db`) | Steps 10.1–10.4 done. Step 10.5 in progress (skeleton & DB migrated). Next: routes, clients & worker |
 | **Phase 11**| **Notification Service**| ❌ Pending | Nodemailer, Redis Queue | Email invites and scheduled reminders |
 | **Phase 12**| **Gateway Hardening** | ⏳ Partial | `express-rate-limit` | Throttling, centralized validation & security |
 | **Phase 13**| **Observability** | ⏳ Partial | Pino HTTP (Prometheus/Grafana planned) | Structured logging, metrics & tracing |

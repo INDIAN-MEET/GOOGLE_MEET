@@ -42,7 +42,7 @@
 | 10.2 | `userId` in SFU producers                                             |              ✅ Done              |
 | 10.3 | SFU recorder module                                                     |              ✅ Done              |
 | 10.4 | Test the SFU recorder alone                                             |              ✅ Done              |
-| 10.5 | recording-service: skeleton, database, start/stop API, webhook          |                ⏳                |
+| 10.5 | recording-service: skeleton, database, start/stop API, webhook          | 🟡 In Progress (Skeleton & DB migrated) |
 | 10.6 | BullMQ finalize worker (MKV → MP4)                                     |                ⏳                |
 | 10.7 | Storage and download                                                    |                ⏳                |
 | 10.8 | Gateway proxy                                                           |                ⏳                |
@@ -1373,6 +1373,8 @@ The webhook will fail with retries now, because recording-service does not exist
 
 **If something fails **
 
+
+
 | Symptom                                               | Likely cause                          | What to do                                                                                                                                        |
 | :---------------------------------------------------- | :------------------------------------ | :------------------------------------------------------------------------------------------------------------------------------------------------ |
 | File is 0 bytes                                       | FFmpeg got no RTP                     | Check the SDP file next to the`.mkv`: the port and payload type must match. Look at `docker compose logs sfu-service` for `ffmpeg` warnings |
@@ -1393,7 +1395,7 @@ The webhook will fail with retries now, because recording-service does not exist
 
 Nine sub-steps. At the end, a host can start and stop a recording and the row reaches `PROCESSING`.
 
-### Step 10.5.1: Create the service from room-service
+### Step 10.5.1: Create the service from room-service ✅ done
 
 **Why**
 
@@ -1567,7 +1569,7 @@ export function toSegmentDto(recordingId: string, s: any) {
 
 ---
 
-### Step 10.5.3: Database models
+### Step 10.5.3: Database models ✅ done
 
 **Why**
 
@@ -1633,6 +1635,8 @@ npx prisma migrate dev --name init
 ```powershell
 docker compose exec postgres psql -U postgres -d recording_db -c "\dt"
 ```
+
+**Verified:** ✅ Migration `20261017171008_init` applied to PostgreSQL `recording_db`. Tables `Recording`, `RecordingSegment`, and `_prisma_migrations` exist and verified.
 
 ---
 
