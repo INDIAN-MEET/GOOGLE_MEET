@@ -42,7 +42,7 @@
 | 10.2 | `userId` in SFU producers                                             |              ✅ Done              |
 | 10.3 | SFU recorder module                                                     |              ✅ Done              |
 | 10.4 | Test the SFU recorder alone                                             |              ✅ Done              |
-| 10.5 | recording-service: skeleton, database, start/stop API, webhook          |                ⏳                |
+| 10.5 | recording-service: skeleton, database, start/stop API, webhook          | 🟡 In Progress (Skeleton & DB migrated) |
 | 10.6 | BullMQ finalize worker (MKV → MP4)                                     |                ⏳                |
 | 10.7 | Storage and download                                                    |                ⏳                |
 | 10.8 | Gateway proxy                                                           |                ⏳                |
@@ -1394,7 +1394,7 @@ The webhook will fail with retries now, because recording-service does not exist
 
 Nine sub-steps. At the end, a host can start and stop a recording and the row reaches `PROCESSING`.
 
-### Step 10.5.1: Create the service from room-service
+### Step 10.5.1: Create the service from room-service ✅ done
 
 **Why**
 
