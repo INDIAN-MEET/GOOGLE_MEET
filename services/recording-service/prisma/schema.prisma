@@ -1,0 +1,61 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum RecordingStatus {
+  STARTING
+  RECORDING
+  STOPPING
+  PROCESSING
+  READY
+  FAILED
+}
+
+enum SegmentStatus {
+  PENDING
+  READY
+  FAILED
+}
+
+model Recording {
+  id         String             @id @default(uuid())
+  roomCode   String
+  startedBy  String             // userId of the host
+  status     RecordingStatus    @default(STARTING)
+  startedAt  DateTime           @default(now())
+  stoppedAt  DateTime?
+  durationMs Int?
+  thumbKey   String?
+  error      String?
+  segments   RecordingSegment[]
+  createdAt  DateTime           @default(now())
+  updatedAt  DateTime           @updatedAt
+
+  @@index([roomCode])
+  @@index([startedBy])
+}
+
+model RecordingSegment {
+  id            String        @id @default(uuid())
+  recordingId   String
+  recording     Recording     @relation(fields: [recordingId], references: [id], onDelete: Cascade)
+  index         Int
+  peerId        String
+  userId        String?
+  source        String        // 'camera' | 'screen'
+  hasVideo      Boolean
+  hasAudio      Boolean
+  startOffsetMs Int
+  durationMs    Int?
+  rawPath       String
+  storageKey    String?
+  sizeBytes     Int?
+  status        SegmentStatus @default(PENDING)
+  error         String?
+
+  @@index([recordingId])
+}
