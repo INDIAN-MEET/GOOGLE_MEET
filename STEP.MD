@@ -1,7 +1,7 @@
 # Video Meet App — Detailed File-by-File Build Steps & Execution Checklist
 
 > **Current Implementation Status:** Phases 0 through 9 are **✅ COMPLETED**.
-> Phase 10 is **🟡 IN PROGRESS** (Steps 10.1–10.4 done).
+> Phase 10 is **🟡 IN PROGRESS** (Steps 10.1–10.4 done, Step 10.5 skeleton & DB migrated).
 > Phases 11 through 16 and Phase F are **⏳ NEXT / PENDING**.
 
 ---
@@ -20,7 +20,7 @@
 | **Phase 7**  | **TURN/STUN**            | ✅ COMPLETED | Coturn container (`infra/coturn/turnserver.conf`) & HMAC credentials endpoint.                         |
 | **Phase 8**  | **Chat Service**         | ✅ COMPLETED | Port 4005. MongoDB Mongoose schema, Redis subscriber to`chat-message`, history REST API.               |
 | **Phase 9**  | **SFU Service**          | ✅ COMPLETED | Backend service complete: mediasoup workers, routers, transports, producers, consumers, auth, signaling integration & room mode. Frontend in Phase F. |
-| **Phase 10** | **Recording Service**    | 🟡 IN PROGRESS | Steps 10.1–10.4 completed (Infra, SFU recorder module, status endpoint, isolated SFU test). Next: Step 10.5 recording-service. |
+| **Phase 10** | **Recording Service**    | 🟡 IN PROGRESS | Steps 10.1–10.4 done. Step 10.5 in progress (skeleton, Prisma models & migration for recording_db completed). Next: Step 10.5 routes & handlers. |
 | **Phase 11** | **Notification Service** |  ⏳ PENDING  | Nodemailer / email worker for scheduled invites & meeting reminders.                                     |
 | **Phase 12** | **Gateway Hardening**    |  ⏳ PENDING  | Rate limiting (`express-rate-limit`) & centralized error handler validation.                           |
 | **Phase 13** | **Observability**        |  ⏳ PENDING  | Prometheus`/metrics`, Grafana dashboards & OpenTelemetry tracing.                                      |
@@ -278,14 +278,16 @@ flowchart TD
 
 **Goal:** Downloadable video recordings produced asynchronously post-call.
 
-```mermaid
-flowchart TD
-    S1["Step 10.1<br/>Add message queue (BullMQ)"] --> S2["Step 10.2<br/>Host clicks Record → enqueue job"]
-    S2 --> S3["Step 10.3<br/>Worker: mediasoup PlainTransport"]
-    S3 --> S4["Step 10.4<br/>FFmpeg encodes incoming stream"]
-    S4 --> S5["Step 10.5<br/>Upload finished file to S3/Blob"]
-    S5 --> S6["Step 10.6<br/>Store metadata + notify frontend"]
-```
+- **Step 10.1 — Infrastructure:** ✅ Done (`recording_db` in `init.sql`, FFmpeg in SFU Dockerfile, `/recordings` volume mounted).
+- **Step 10.2 — Forward `userId`:** ✅ Done (Signaling & SFU producer appData forwarding).
+- **Step 10.3 — SFU Recorder Module:** ✅ Done (`ports.ts`, `sdp.ts`, `segmentRecorder.ts`, `manifest.ts`, `recordingManager.ts`, routes & controller).
+- **Step 10.4 — Isolated SFU Test:** ✅ Done (`test-client/sfu-oneClick.html` recording test suite and `/status` route verified).
+- **Step 10.5 — Recording Service Skeleton & DB:** 🟡 In Progress
+  - [x] Service scaffolding & dependencies installed (`services/recording-service`).
+  - [x] Prisma models (`Recording` & `RecordingSegment`) created in `schema.prisma`.
+  - [x] Initial migration applied to `recording_db` (`20261017171008_init`).
+  - [ ] Next: Env, clients (Redis, Room, SFU), middleware, controllers, routes.
+- **Steps 10.6 – 10.11:** ⏳ Pending (Finalize BullMQ worker, storage/download, gateway proxy, signaling events, hardening).
 
 ---
 
