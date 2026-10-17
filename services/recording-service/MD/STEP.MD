@@ -1568,7 +1568,7 @@ export function toSegmentDto(recordingId: string, s: any) {
 
 ---
 
-### Step 10.5.3: Database models
+### Step 10.5.3: Database models ✅ done
 
 **Why**
 
@@ -1634,6 +1634,8 @@ npx prisma migrate dev --name init
 ```powershell
 docker compose exec postgres psql -U postgres -d recording_db -c "\dt"
 ```
+
+**Verified:** ✅ Migration `20261017171008_init` applied to PostgreSQL `recording_db`. Tables `Recording`, `RecordingSegment`, and `_prisma_migrations` exist and verified.
 
 ---
 
