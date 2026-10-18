@@ -1,11 +1,11 @@
 import { randomUUID } from 'node:crypto';
 import type { Request, Response } from 'express';
-import { prisma } from '../config/prisma.js';
-import { acquireLock, releaseLock } from '../config/redis.js';
-import { getActiveRoom } from '../config/roomServiceClient.js';
-import { startCapture, stopCapture } from '../config/sfuClient.js';
-import { publishRecordingEvent } from '../events/publisher.js';
-import { AppError } from '../utils/AppError.js';
+import { prisma } from '../config/prisma.ts';
+import { acquireLock, releaseLock } from '../config/redis.ts';
+import { getActiveRoom } from '../config/roomServiceClient.ts';
+import { startCapture, stopCapture } from '../config/sfuClient.ts';
+import { publishRecordingEvent } from '../events/publisher.ts';
+import { AppError } from '../utils/AppError.ts';
 
 /**
  * startRecording(req, res)   -> POST /v1/recordings/start

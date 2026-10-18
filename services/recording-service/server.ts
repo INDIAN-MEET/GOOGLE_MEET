@@ -1,8 +1,8 @@
-import { app } from './src/app.js';
-import { env } from './src/config/env.js';
-import { prisma } from './src/config/prisma.js';
-import { redis } from './src/config/redis.js';
-import { logger } from './src/utils/logger.js';
+import { app } from './src/app.ts';
+import { env } from './src/config/env.ts';
+import { prisma } from './src/config/prisma.ts';
+import { redis } from './src/config/redis.ts';
+import { logger } from './src/utils/logger.ts';
 
 /**
  * server.ts

@@ -1,9 +1,9 @@
 import type { Request, Response } from 'express';
-import { prisma } from '../config/prisma.js';
-import { releaseLock } from '../config/redis.js';
-import { publishRecordingEvent } from '../events/publisher.js';
-import { enqueueFinalize } from '../queue/queues.js';
-import { AppError } from '../utils/AppError.js';
+import { prisma } from '../config/prisma.ts';
+import { releaseLock } from '../config/redis.ts';
+import { publishRecordingEvent } from '../events/publisher.ts';
+import { enqueueFinalize } from '../queue/queues.ts';
+import { AppError } from '../utils/AppError.ts';
 
 interface WebhookSegment {
   index: number;

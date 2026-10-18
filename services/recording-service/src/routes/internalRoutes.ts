@@ -1,18 +1,22 @@
 import { Router } from 'express';
-import { startRecording, stopRecording } from '../controllers/recordingController.js';
-import { authGuard } from '../middleware/authGuard.js';
-import { validate } from '../middleware/validate.js';
-import { recordingIdParamSchema, startRecordingSchema } from '../validation/recordingSchemas.js';
-import { asyncHandler } from '../utils/asyncHandler.js';
+import { captureEnded } from '../controllers/internalController.ts';
+import { internalGuard } from '../middleware/internalGuard.ts';
+import { validate } from '../middleware/validate.ts';
+import { captureEndedSchema, recordingIdParamSchema } from '../validation/recordingSchemas.ts';
+import { asyncHandler } from '../utils/asyncHandler.ts';
 
 /**
- * User routes. authGuard runs first on every route.
- * List, get, download, delete are added in Step 10.7.
+ * Internal routes called by SFU service.
+ * Protected by internalGuard (x-internal-secret).
  */
 const router = Router();
-router.use(authGuard);
+router.use(internalGuard);
 
-router.post('/start', validate(startRecordingSchema), asyncHandler(startRecording));
-router.post('/:id/stop', validate(recordingIdParamSchema, 'params'), asyncHandler(stopRecording));
+router.post(
+  '/:id/capture-ended',
+  validate(recordingIdParamSchema, 'params'),
+  validate(captureEndedSchema),
+  asyncHandler(captureEnded),
+);
 
 export default router;

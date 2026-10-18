@@ -1,6 +1,6 @@
 import axios from 'axios';
-import { env } from './env.js';
-import { AppError } from '../utils/AppError.js';
+import { env } from './env.ts';
+import { AppError } from '../utils/AppError.ts';
 
 export interface RoomInfo {
   id: string;

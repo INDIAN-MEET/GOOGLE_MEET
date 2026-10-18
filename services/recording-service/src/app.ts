@@ -1,8 +1,8 @@
 import express from 'express';
 import helmet from 'helmet';
-import internalRoutes from './routes/internalRoutes.js';
-import recordingRoutes from './routes/recordingRoutes.js';
-import { errorHandler, notFound } from './middleware/errorHandler.js';
+import internalRoutes from './routes/internalRoutes.ts';
+import recordingRoutes from './routes/recordingRoutes.ts';
+import { errorHandler, notFound } from './middleware/errorHandler.ts';
 
 /**
  * app.ts
@@ -21,7 +21,9 @@ app.get('/health', (_req, res) => {
 });
 
 app.use('/v1/recordings', recordingRoutes);
-app.use('/internal', internalRoutes);
+app.use('/internal/recordings', internalRoutes);
 
 app.use(notFound);
 app.use(errorHandler);
+
+export default app;

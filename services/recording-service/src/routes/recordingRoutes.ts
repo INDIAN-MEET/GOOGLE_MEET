@@ -1,9 +1,9 @@
 import { Router } from 'express';
-import { startRecording, stopRecording } from '../controllers/recordingController.js';
-import { authGuard } from '../middleware/authGuard.js';
-import { validate } from '../middleware/validate.js';
-import { recordingIdParamSchema, startRecordingSchema } from '../validation/recordingSchemas.js';
-import { asyncHandler } from '../utils/asyncHandler.js';
+import { startRecording, stopRecording } from '../controllers/recordingController.ts';
+import { authGuard } from '../middleware/authGuard.ts';
+import { validate } from '../middleware/validate.ts';
+import { recordingIdParamSchema, startRecordingSchema } from '../validation/recordingSchemas.ts';
+import { asyncHandler } from '../utils/asyncHandler.ts';
 
 /**
  * User routes. authGuard runs first on every route.

@@ -66,7 +66,7 @@
 
 - Room Service returns the host as **`room.hostUserId`** and `GET /v1/rooms/:code` returns `{ data: { room } }`.
 - Your Prisma setup follows the "Prisma 7 pattern" (no `url` in `schema.prisma`, a `prisma.config.ts`, the `PrismaPg` adapter in a `db.ts`). **Copy those files from room-service. This guide only supplies the models and the queries.**
-- recording-service uses `.js` import endings (like room-service and signaling). The SFU keeps `.ts` endings.
+- recording-service uses `.ts` import endings (like SFU service, enabled via `allowImportingTsExtensions` and `rewriteRelativeImportExtensions` in `tsconfig.json`).
 
 ---
 

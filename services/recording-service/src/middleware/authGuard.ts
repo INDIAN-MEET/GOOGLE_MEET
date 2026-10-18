@@ -1,7 +1,7 @@
 import type { NextFunction, Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
-import { env } from '../config/env.js';
-import { AppError } from '../utils/AppError.js';
+import { env } from '../config/env.ts';
+import { AppError } from '../utils/AppError.ts';
 
 declare global {
   // eslint-disable-next-line @typescript-eslint/no-namespace

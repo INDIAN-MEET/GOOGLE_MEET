@@ -1,6 +1,6 @@
 import type { NextFunction, Request, Response } from 'express';
-import { AppError } from '../utils/AppError.js';
-import { logger } from '../utils/logger.js';
+import { AppError } from '../utils/AppError.ts';
+import { logger } from '../utils/logger.ts';
 
 /**
  * notFound: unknown URL -> 404.

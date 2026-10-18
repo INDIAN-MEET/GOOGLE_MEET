@@ -1,6 +1,6 @@
 import { Queue } from 'bullmq';
 import { Redis } from 'ioredis';
-import { env } from '../config/env.js';
+import { env } from '../config/env.ts';
 
 /**
  * queues.ts

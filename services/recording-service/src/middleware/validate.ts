@@ -1,6 +1,6 @@
 import type { NextFunction, Request, Response } from 'express';
 import type Joi from 'joi';
-import { AppError } from '../utils/AppError.js';
+import { AppError } from '../utils/AppError.ts';
 
 /**
  * validate(schema, where)

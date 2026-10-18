@@ -1,7 +1,7 @@
 import { createHash, timingSafeEqual } from 'node:crypto';
 import type { NextFunction, Request, Response } from 'express';
-import { env } from '../config/env.js';
-import { AppError } from '../utils/AppError.js';
+import { env } from '../config/env.ts';
+import { AppError } from '../utils/AppError.ts';
 
 /**
  * internalGuard (for the SFU only)
