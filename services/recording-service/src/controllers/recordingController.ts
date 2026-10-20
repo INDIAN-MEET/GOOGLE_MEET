@@ -3,27 +3,33 @@ import type { Request, Response } from 'express';
 import { prisma } from '../config/prisma.ts';
 import { acquireLock, releaseLock } from '../config/redis.ts';
 import { getActiveRoom } from '../config/roomServiceClient.ts';
-import { startCapture, stopCapture } from '../config/sfuClient.ts';
+import { startCapture } from '../config/sfuClient.ts';
 import { publishRecordingEvent } from '../events/publisher.ts';
+import { assertDiskSpace } from '../maintenance/diskGuard.ts';
+import { cancelAutoStop, scheduleAutoStop } from '../queue/autoStop.ts';
+import { requestStop } from '../services/recordingLifecycle.ts';
 import { AppError } from '../utils/AppError.ts';
+import { logger } from '../utils/logger.ts';
 
 /**
- * startRecording(req, res)   -> POST /v1/recordings/start
+ * POST /v1/recordings/start : starts a recording (host only).
  *
- * STEP 1: Read roomCode. The user id comes from the verified JWT (never from the body).
- * STEP 2: Ask Room Service for the room with the caller's token.
- *         Not found or ended -> 404.
- * STEP 3: Host check: room.hostUserId must equal req.userId. Not host -> 403.
- * STEP 4: Create the recording id FIRST, then take the lock with that id
- *         (SET NX). Not acquired -> 409 "Already recording".
- * STEP 5: Insert the Recording row with status STARTING (using the same id).
- * STEP 6: Call the SFU start. On ANY error: release the lock, mark FAILED, rethrow.
- *         SFU 404 means nobody is in the call, so answer 409 "Room is empty".
- * STEP 7: Mark RECORDING and publish "recording-started".
- *         (Auto-stop after MAX_RECORDING_MINUTES is added in Step 10.11.)
- * STEP 8: Respond 201 { recordingId, status: 'RECORDING' }.
+ * STEP 1: Read roomCode; the user id comes from the verified JWT.
+ * STEP 2: Ask Room Service for the room. Not found or ended gives 404.
+ * STEP 3: Host check (room.hostUserId === caller), otherwise 403.
+ * STEP 4: Disk guard. Critically low space gives 503 before any state is created.
+ * STEP 5: Take the Redis lock (one recording per room), otherwise 409.
+ * STEP 6: Insert the row (STARTING), call the SFU. On error: unlock, mark FAILED, rethrow
+ *         (SFU 404 means nobody is in the call, so 409 "Room is empty").
+ * STEP 7: Mark RECORDING, publish "recording-started", schedule the auto-stop job.
+ * STEP 8: Respond 201.
+ *
+ * @param req - Request with body `{ roomCode }`.
+ * @param res - Response `{ success, data: { recordingId, status } }`.
+ * @returns A promise that resolves after the response is sent.
+ * @throws AppError 403, 404, 409, 503 or the SFU error.
  */
-export async function startRecording(req: Request, res: Response) {
+export async function startRecording(req: Request, res: Response): Promise<void> {
   // STEP 1
   const { roomCode } = req.body as { roomCode: string };
   const userId = req.userId!;
@@ -36,80 +42,61 @@ export async function startRecording(req: Request, res: Response) {
   if (room.hostUserId !== userId) throw new AppError('Only the room host can record', 403);
 
   // STEP 4
+  await assertDiskSpace();
+
+  // STEP 5
   const recordingId = randomUUID();
-  const locked = await acquireLock(roomCode, recordingId);
-  if (!locked) throw new AppError('Already recording', 409);
+  if (!(await acquireLock(roomCode, recordingId))) throw new AppError('Already recording', 409);
 
   try {
-    // STEP 5
-    await prisma.recording.create({
-      data: { id: recordingId, roomCode, startedBy: userId, status: 'STARTING' },
-    });
-
     // STEP 6
+    await prisma.recording.create({ data: { id: recordingId, roomCode, startedBy: userId, status: 'STARTING' } });
     await startCapture(roomCode, recordingId);
   } catch (err) {
     await releaseLock(roomCode, recordingId);
     await prisma.recording.updateMany({
       where: { id: recordingId },
-      data: { status: 'FAILED', error: err instanceof Error ? err.message : 'Start failed' },
+      data: { status: 'FAILED', error: err instanceof Error ? err.message.slice(0, 500) : 'Start failed' },
     });
-    if (err instanceof AppError && err.statusCode === 404) {
-      throw new AppError('Room is empty', 409);
-    }
+    if (err instanceof AppError && err.statusCode === 404) throw new AppError('Room is empty', 409);
     throw err;
   }
 
   // STEP 7
   await prisma.recording.update({ where: { id: recordingId }, data: { status: 'RECORDING' } });
-  await publishRecordingEvent({
-    type: 'recording-started',
-    roomCode,
-    recordingId,
-    startedBy: userId,
-  });
+  await publishRecordingEvent({ type: 'recording-started', roomCode, recordingId, startedBy: userId });
+  try {
+    await scheduleAutoStop(recordingId);
+  } catch (err) {
+    logger.error({ err, recordingId }, 'Could not schedule auto-stop (recovery enforces the limit)');
+  }
 
   // STEP 8
   res.status(201).json({ success: true, data: { recordingId, status: 'RECORDING' } });
 }
 
 /**
- * stopRecording(req, res)   -> POST /v1/recordings/:id/stop
+ * POST /v1/recordings/:id/stop : stops a recording (owner only).
  *
- * STEP 1: Load the recording. Not found -> 404. startedBy !== caller -> 403.
- * STEP 2: Move RECORDING -> STOPPING in ONE database update (updateMany with a
- *         status filter). If 0 rows changed, it was not RECORDING -> 409.
- *         This also blocks a double click from stopping twice.
- * STEP 3: Call the SFU stop. It answers fast. The real result arrives by webhook.
- *         If the SFU call fails, put the status back to RECORDING and rethrow.
- * STEP 4: Respond 202 { status: 'STOPPING' }.
+ * STEP 1: Load the recording. 404 if missing, 403 if the caller is not the owner.
+ * STEP 2: requestStop() does the atomic RECORDING to STOPPING change and calls the SFU.
+ *         "not-active" means it was not RECORDING, so 409.
+ * STEP 3: Cancel the auto-stop job and respond 202. The result arrives by webhook.
+ *
+ * @param req - Request with `params.id`.
+ * @param res - Response `{ success, data: { status: 'STOPPING' } }`.
+ * @returns A promise that resolves after the response is sent.
+ * @throws AppError 403, 404, 409 or the SFU error (status restored to RECORDING).
  */
-export async function stopRecording(req: Request, res: Response) {
+export async function stopRecording(req: Request, res: Response): Promise<void> {
   const id = String(req.params.id);
 
-  // STEP 1
   const recording = await prisma.recording.findUnique({ where: { id } });
   if (!recording) throw new AppError('Recording not found', 404);
   if (recording.startedBy !== req.userId) throw new AppError('Forbidden', 403);
 
-  // STEP 2
-  const changed = await prisma.recording.updateMany({
-    where: { id, status: 'RECORDING' },
-    data: { status: 'STOPPING' },
-  });
-  if (changed.count === 0) throw new AppError('Recording is not active', 409);
+  if ((await requestStop(id, 'user')) === 'not-active') throw new AppError('Recording is not active', 409);
 
-  // STEP 3
-  try {
-    await stopCapture(recording.roomCode, id);
-  } catch (err) {
-    await prisma.recording.updateMany({
-      where: { id, status: 'STOPPING' },
-      data: { status: 'RECORDING' },
-    });
-    throw err;
-  }
-
-  // STEP 4
+  await cancelAutoStop(id);
   res.status(202).json({ success: true, data: { status: 'STOPPING' } });
 }

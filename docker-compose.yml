@@ -145,6 +145,7 @@ services:
     build: ./services/recording-service
     container_name: recording-service
     restart: unless-stopped
+    stop_grace_period: 90s
     ports:
       - "4007:4007"          # dev only
     env_file:

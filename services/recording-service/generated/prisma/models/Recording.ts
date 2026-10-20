@@ -9,8 +9,8 @@
  * 🟢 You can import this file directly.
  */
 import type * as runtime from "@prisma/client/runtime/client"
-import type * as $Enums from "../enums.js"
-import type * as Prisma from "../internal/prismaNamespace.js"
+import type * as $Enums from "../enums.ts"
+import type * as Prisma from "../internal/prismaNamespace.ts"
 
 /**
  * Model Recording
@@ -44,6 +44,7 @@ export type RecordingMinAggregateOutputType = {
   durationMs: number | null
   thumbKey: string | null
   error: string | null
+  rawCleanedAt: Date | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -58,6 +59,7 @@ export type RecordingMaxAggregateOutputType = {
   durationMs: number | null
   thumbKey: string | null
   error: string | null
+  rawCleanedAt: Date | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -72,6 +74,7 @@ export type RecordingCountAggregateOutputType = {
   durationMs: number
   thumbKey: number
   error: number
+  rawCleanedAt: number
   createdAt: number
   updatedAt: number
   _all: number
@@ -96,6 +99,7 @@ export type RecordingMinAggregateInputType = {
   durationMs?: true
   thumbKey?: true
   error?: true
+  rawCleanedAt?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -110,6 +114,7 @@ export type RecordingMaxAggregateInputType = {
   durationMs?: true
   thumbKey?: true
   error?: true
+  rawCleanedAt?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -124,6 +129,7 @@ export type RecordingCountAggregateInputType = {
   durationMs?: true
   thumbKey?: true
   error?: true
+  rawCleanedAt?: true
   createdAt?: true
   updatedAt?: true
   _all?: true
@@ -225,6 +231,7 @@ export type RecordingGroupByOutputType = {
   durationMs: number | null
   thumbKey: string | null
   error: string | null
+  rawCleanedAt: Date | null
   createdAt: Date
   updatedAt: Date
   _count: RecordingCountAggregateOutputType | null
@@ -262,6 +269,7 @@ export type RecordingWhereInput = {
   durationMs?: Prisma.IntNullableFilter<"Recording"> | number | null
   thumbKey?: Prisma.StringNullableFilter<"Recording"> | string | null
   error?: Prisma.StringNullableFilter<"Recording"> | string | null
+  rawCleanedAt?: Prisma.DateTimeNullableFilter<"Recording"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"Recording"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Recording"> | Date | string
   segments?: Prisma.RecordingSegmentListRelationFilter
@@ -277,6 +285,7 @@ export type RecordingOrderByWithRelationInput = {
   durationMs?: Prisma.SortOrderInput | Prisma.SortOrder
   thumbKey?: Prisma.SortOrderInput | Prisma.SortOrder
   error?: Prisma.SortOrderInput | Prisma.SortOrder
+  rawCleanedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   segments?: Prisma.RecordingSegmentOrderByRelationAggregateInput
@@ -295,6 +304,7 @@ export type RecordingWhereUniqueInput = Prisma.AtLeast<{
   durationMs?: Prisma.IntNullableFilter<"Recording"> | number | null
   thumbKey?: Prisma.StringNullableFilter<"Recording"> | string | null
   error?: Prisma.StringNullableFilter<"Recording"> | string | null
+  rawCleanedAt?: Prisma.DateTimeNullableFilter<"Recording"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"Recording"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Recording"> | Date | string
   segments?: Prisma.RecordingSegmentListRelationFilter
@@ -310,6 +320,7 @@ export type RecordingOrderByWithAggregationInput = {
   durationMs?: Prisma.SortOrderInput | Prisma.SortOrder
   thumbKey?: Prisma.SortOrderInput | Prisma.SortOrder
   error?: Prisma.SortOrderInput | Prisma.SortOrder
+  rawCleanedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   _count?: Prisma.RecordingCountOrderByAggregateInput
@@ -332,6 +343,7 @@ export type RecordingScalarWhereWithAggregatesInput = {
   durationMs?: Prisma.IntNullableWithAggregatesFilter<"Recording"> | number | null
   thumbKey?: Prisma.StringNullableWithAggregatesFilter<"Recording"> | string | null
   error?: Prisma.StringNullableWithAggregatesFilter<"Recording"> | string | null
+  rawCleanedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"Recording"> | Date | string | null
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"Recording"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"Recording"> | Date | string
 }
@@ -346,6 +358,7 @@ export type RecordingCreateInput = {
   durationMs?: number | null
   thumbKey?: string | null
   error?: string | null
+  rawCleanedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   segments?: Prisma.RecordingSegmentCreateNestedManyWithoutRecordingInput
@@ -361,6 +374,7 @@ export type RecordingUncheckedCreateInput = {
   durationMs?: number | null
   thumbKey?: string | null
   error?: string | null
+  rawCleanedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   segments?: Prisma.RecordingSegmentUncheckedCreateNestedManyWithoutRecordingInput
@@ -376,6 +390,7 @@ export type RecordingUpdateInput = {
   durationMs?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   thumbKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   error?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  rawCleanedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   segments?: Prisma.RecordingSegmentUpdateManyWithoutRecordingNestedInput
@@ -391,6 +406,7 @@ export type RecordingUncheckedUpdateInput = {
   durationMs?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   thumbKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   error?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  rawCleanedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   segments?: Prisma.RecordingSegmentUncheckedUpdateManyWithoutRecordingNestedInput
@@ -406,6 +422,7 @@ export type RecordingCreateManyInput = {
   durationMs?: number | null
   thumbKey?: string | null
   error?: string | null
+  rawCleanedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -420,6 +437,7 @@ export type RecordingUpdateManyMutationInput = {
   durationMs?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   thumbKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   error?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  rawCleanedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -434,6 +452,7 @@ export type RecordingUncheckedUpdateManyInput = {
   durationMs?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   thumbKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   error?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  rawCleanedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -448,6 +467,7 @@ export type RecordingCountOrderByAggregateInput = {
   durationMs?: Prisma.SortOrder
   thumbKey?: Prisma.SortOrder
   error?: Prisma.SortOrder
+  rawCleanedAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -466,6 +486,7 @@ export type RecordingMaxOrderByAggregateInput = {
   durationMs?: Prisma.SortOrder
   thumbKey?: Prisma.SortOrder
   error?: Prisma.SortOrder
+  rawCleanedAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -480,6 +501,7 @@ export type RecordingMinOrderByAggregateInput = {
   durationMs?: Prisma.SortOrder
   thumbKey?: Prisma.SortOrder
   error?: Prisma.SortOrder
+  rawCleanedAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -545,6 +567,7 @@ export type RecordingCreateWithoutSegmentsInput = {
   durationMs?: number | null
   thumbKey?: string | null
   error?: string | null
+  rawCleanedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -559,6 +582,7 @@ export type RecordingUncheckedCreateWithoutSegmentsInput = {
   durationMs?: number | null
   thumbKey?: string | null
   error?: string | null
+  rawCleanedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -589,6 +613,7 @@ export type RecordingUpdateWithoutSegmentsInput = {
   durationMs?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   thumbKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   error?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  rawCleanedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -603,6 +628,7 @@ export type RecordingUncheckedUpdateWithoutSegmentsInput = {
   durationMs?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   thumbKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   error?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  rawCleanedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -648,6 +674,7 @@ export type RecordingSelect<ExtArgs extends runtime.Types.Extensions.InternalArg
   durationMs?: boolean
   thumbKey?: boolean
   error?: boolean
+  rawCleanedAt?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   segments?: boolean | Prisma.Recording$segmentsArgs<ExtArgs>
@@ -664,6 +691,7 @@ export type RecordingSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Ext
   durationMs?: boolean
   thumbKey?: boolean
   error?: boolean
+  rawCleanedAt?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }, ExtArgs["result"]["recording"]>
@@ -678,6 +706,7 @@ export type RecordingSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Ext
   durationMs?: boolean
   thumbKey?: boolean
   error?: boolean
+  rawCleanedAt?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }, ExtArgs["result"]["recording"]>
@@ -692,11 +721,12 @@ export type RecordingSelectScalar = {
   durationMs?: boolean
   thumbKey?: boolean
   error?: boolean
+  rawCleanedAt?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }
 
-export type RecordingOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "roomCode" | "startedBy" | "status" | "startedAt" | "stoppedAt" | "durationMs" | "thumbKey" | "error" | "createdAt" | "updatedAt", ExtArgs["result"]["recording"]>
+export type RecordingOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "roomCode" | "startedBy" | "status" | "startedAt" | "stoppedAt" | "durationMs" | "thumbKey" | "error" | "rawCleanedAt" | "createdAt" | "updatedAt", ExtArgs["result"]["recording"]>
 export type RecordingInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   segments?: boolean | Prisma.Recording$segmentsArgs<ExtArgs>
   _count?: boolean | Prisma.RecordingCountOutputTypeDefaultArgs<ExtArgs>
@@ -719,6 +749,7 @@ export type $RecordingPayload<ExtArgs extends runtime.Types.Extensions.InternalA
     durationMs: number | null
     thumbKey: string | null
     error: string | null
+    rawCleanedAt: Date | null
     createdAt: Date
     updatedAt: Date
   }, ExtArgs["result"]["recording"]>
@@ -1154,6 +1185,7 @@ export interface RecordingFieldRefs {
   readonly durationMs: Prisma.FieldRef<"Recording", 'Int'>
   readonly thumbKey: Prisma.FieldRef<"Recording", 'String'>
   readonly error: Prisma.FieldRef<"Recording", 'String'>
+  readonly rawCleanedAt: Prisma.FieldRef<"Recording", 'DateTime'>
   readonly createdAt: Prisma.FieldRef<"Recording", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"Recording", 'DateTime'>
 }

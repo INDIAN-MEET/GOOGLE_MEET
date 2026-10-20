@@ -8,6 +8,6 @@
  *
  * 🟢 You can import this file directly.
  */
-export type * from './models/Recording.js'
-export type * from './models/RecordingSegment.js'
-export type * from './commonInputTypes.js'
+export type * from './models/Recording.ts'
+export type * from './models/RecordingSegment.ts'
+export type * from './commonInputTypes.ts'
