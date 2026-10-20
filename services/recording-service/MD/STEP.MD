@@ -42,7 +42,7 @@
 | 10.2 | `userId` in SFU producers                                             |              ✅ Done              |
 | 10.3 | SFU recorder module                                                     |              ✅ Done              |
 | 10.4 | Test the SFU recorder alone                                             |              ✅ Done              |
-| 10.5 | recording-service: skeleton, database, start/stop API, webhook          | 🟡 In Progress (Skeleton & DB migrated) |
+| 10.5 | recording-service: skeleton, database, start/stop API, webhook          |              ✅ Done              |
 | 10.6 | BullMQ finalize worker (MKV → MP4)                                     |                ⏳                |
 | 10.7 | Storage and download                                                    |                ⏳                |
 | 10.8 | Gateway proxy                                                           |                ⏳                |
@@ -66,7 +66,7 @@
 
 - Room Service returns the host as **`room.hostUserId`** and `GET /v1/rooms/:code` returns `{ data: { room } }`.
 - Your Prisma setup follows the "Prisma 7 pattern" (no `url` in `schema.prisma`, a `prisma.config.ts`, the `PrismaPg` adapter in a `db.ts`). **Copy those files from room-service. This guide only supplies the models and the queries.**
-- recording-service uses `.js` import endings (like room-service and signaling). The SFU keeps `.ts` endings.
+- recording-service uses `.ts` import endings (like SFU service, enabled via `allowImportingTsExtensions` and `rewriteRelativeImportExtensions` in `tsconfig.json`).
 
 ---
 
@@ -2450,6 +2450,22 @@ Invoke-RestMethod -Method Post -Uri http://localhost:4007/v1/recordings/<recordi
 - A job is waiting in Redis: `docker compose exec redis redis-cli keys "bull:recording-finalize:*"`.
 - The lock is gone: `docker compose exec redis redis-cli keys "recording:active:*"` is empty.
 - Commit: `phase-10: step 5 recording service skeleton and api`
+
+**Verified:** ✅ Step 10.5 fully verified end-to-end on live service:
+- `GET /health` → `200 {"status":"ok","service":"recording-service"}`.
+- Missing token → `401 {"success":false,"message":"Missing token"}`.
+- Non-host token → `403 {"success":false,"message":"Only the room host can record"}`.
+- Unknown room code → `404 {"success":false,"message":"Room not found"}`.
+- Empty room (no media) → `409 {"success":false,"message":"Room is empty"}`.
+- Start as host with active SFU producers → `201 {"success":true,"data":{"recordingId":"...","status":"RECORDING"}}`.
+- Duplicate start while active → `409 {"success":false,"message":"Already recording"}`.
+- Stop as host → `202 {"success":true,"data":{"status":"STOPPING"}}`.
+- SFU `capture-ended` webhook received:
+  - Redis lock deleted.
+  - Recording row updated to `PROCESSING` with measured `durationMs`.
+  - `RecordingSegment` row inserted (`source: camera`, `hasVideo: true`, `hasAudio: true`, raw `.mkv` path).
+  - BullMQ job `finalize-<recordingId>` queued in Redis.
+  - Raw MKV verified on disk: `/recordings/<recordingId>/raw/0-peer-a-camera.mkv`.
 
 ---
 

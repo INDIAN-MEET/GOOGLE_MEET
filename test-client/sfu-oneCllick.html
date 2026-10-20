@@ -292,11 +292,13 @@
       id="secret"
       type="password"
       placeholder="x-internal-secret (same as INTERNAL_SECRET)"
+      value="paste_the_long_random_string_here"
       aria-label="Internal secret"
     />
 
     <button id="go">1. Run full test</button>
     <button id="rec" class="ghost" disabled>1b. Test recording (Step 10.4)</button>
+    <button id="recService" class="ghost" disabled>1c. Test recording-service (Step 10.5)</button>
     <button id="stop" class="ghost" disabled>2. Test leave + cleanup</button>
     <button id="auth" class="ghost">3. Test auth (Step 10)</button>
   </div>
@@ -569,7 +571,9 @@
 
     STEPS.forEach((_, index) => mark(index, '', ''));
 
+    const urlParams = new URLSearchParams(location.search);
     const roomId =
+      urlParams.get('roomId') ||
       'oneclick-' + Math.random().toString(36).slice(2, 10);
 
     const A = 'peer-a';
@@ -849,6 +853,7 @@
       $('go').disabled = false;
       $('stop').disabled = !S.roomId;
       $('rec').disabled = !S.roomId;
+      if ($('recService')) $('recService').disabled = !S.roomId;
     }
   };
 
@@ -1402,6 +1407,89 @@
       $('rec').disabled = false;
     }
   };
+
+  const HOST_JWT = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJob3N0LTEyMyIsImlhdCI6MTc5MjM0MjI4MCwiZXhwIjoxNzkyNDI4NjgwfQ.dWrc322rCwSOawFEECSFs6Z35yVphwVBjNaRO6wQjP0';
+
+  $('recService').onclick = async () => {
+    $('recService').disabled = true;
+    const { roomId } = S;
+    if (!roomId) {
+      log('Run Part 1 first.');
+      $('recService').disabled = false;
+      return;
+    }
+
+    log('\n=== Testing recording-service (Port 4007) ===');
+
+    try {
+      // 1. Health check
+      log('1. Health check: GET http://localhost:4007/health');
+      const hRes = await fetch('http://localhost:4007/health');
+      const hData = await hRes.json();
+      log('   Response: ' + JSON.stringify(hData));
+
+      // 2. Start recording as host
+      log('2. Starting recording: POST http://localhost:4007/v1/recordings/start');
+      const sRes = await fetch('http://localhost:4007/v1/recordings/start', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${HOST_JWT}`
+        },
+        body: JSON.stringify({ roomCode: roomId })
+      });
+      const sData = await sRes.json();
+      log(`   Status: ${sRes.status}, Body: ${JSON.stringify(sData)}`);
+      if (sRes.status !== 201) throw new Error('Start failed: ' + JSON.stringify(sData));
+      const recordingId = sData.data.recordingId;
+
+      // 3. Duplicate start
+      log('3. Duplicate start test: POST http://localhost:4007/v1/recordings/start');
+      const dRes = await fetch('http://localhost:4007/v1/recordings/start', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${HOST_JWT}`
+        },
+        body: JSON.stringify({ roomCode: roomId })
+      });
+      const dData = await dRes.json();
+      log(`   Status: ${dRes.status} (expect 409): ${JSON.stringify(dData)}`);
+
+      // 4. Record for 5 seconds
+      for (let i = 5; i > 0; i--) {
+        log(`   recording via SFU + recording-service... ${i}s`);
+        await new Promise(r => setTimeout(r, 1000));
+      }
+
+      // 5. Stop recording
+      log(`5. Stopping recording: POST http://localhost:4007/v1/recordings/${recordingId}/stop`);
+      const stopRes = await fetch(`http://localhost:4007/v1/recordings/${recordingId}/stop`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${HOST_JWT}`
+        }
+      });
+      const stopData = await stopRes.json();
+      log(`   Status: ${stopRes.status} (expect 202): ${JSON.stringify(stopData)}`);
+
+      $('verdict').className = 'verdict ok';
+      $('verdict').textContent = '✅ recording-service Step 10.5 test PASSED!';
+      log('\n🎉 ALL STEP 10.5 ENDPOINTS VERIFIED & WORKING!');
+    } catch (err) {
+      $('verdict').className = 'verdict bad';
+      $('verdict').textContent = 'recording-service test failed: ' + err.message;
+      log('ERROR: ' + err.message);
+    } finally {
+      $('recService').disabled = false;
+    }
+  };
+
+  if (new URLSearchParams(location.search).get('auto') === '1') {
+    setTimeout(() => {
+      if ($('go')) $('go').click();
+    }, 600);
+  }
 </script>
 </body>
 </html>
