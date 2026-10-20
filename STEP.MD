@@ -1,7 +1,6 @@
 # Video Meet App — Detailed File-by-File Build Steps & Execution Checklist
 
-> **Current Implementation Status:** Phases 0 through 9 are **✅ COMPLETED**.
-> Phase 10 is **🟡 IN PROGRESS** (Steps 10.1–10.5 completed: Infra, SFU recorder, recording-service skeleton, DB, REST start/stop & webhook verified).
+> **Current Implementation Status:** Phases 0 through 10 are **✅ COMPLETED**.
 > Phases 11 through 16 and Phase F are **⏳ NEXT / PENDING**.
 
 ---
@@ -20,7 +19,7 @@
 | **Phase 7**  | **TURN/STUN**            | ✅ COMPLETED | Coturn container (`infra/coturn/turnserver.conf`) & HMAC credentials endpoint.                         |
 | **Phase 8**  | **Chat Service**         | ✅ COMPLETED | Port 4005. MongoDB Mongoose schema, Redis subscriber to`chat-message`, history REST API.               |
 | **Phase 9**  | **SFU Service**          | ✅ COMPLETED | Backend service complete: mediasoup workers, routers, transports, producers, consumers, auth, signaling integration & room mode. Frontend in Phase F. |
-| **Phase 10** | **Recording Service**    | 🟡 IN PROGRESS | Steps 10.1–10.5 completed. Step 10.5 verified live (201 RECORDING, 202 STOPPING, PROCESSING webhook, DB segments & BullMQ queue). Next: Step 10.6 finalize worker. |
+| **Phase 10** | **Recording Service**    | ✅ COMPLETED | Port 4007, `recording_db`. SFU captures per-peer RTP with FFmpeg (copy mode), BullMQ worker converts to MP4, REST API, Redis events to signaling, auto stop, recovery. Frontend part in Phase F. |
 | **Phase 11** | **Notification Service** |  ⏳ PENDING  | Nodemailer / email worker for scheduled invites & meeting reminders.                                     |
 | **Phase 12** | **Gateway Hardening**    |  ⏳ PENDING  | Rate limiting (`express-rate-limit`) & centralized error handler validation.                           |
 | **Phase 13** | **Observability**        |  ⏳ PENDING  | Prometheus`/metrics`, Grafana dashboards & OpenTelemetry tracing.                                      |
@@ -43,7 +42,7 @@
 - [Phase 7 — TURN/STUN Infrastructure [✅ COMPLETED]](#phase-7--turnstun-infrastructure--completed)
 - [Phase 8 — Chat Service [✅ COMPLETED]](#phase-8--chat-service--completed)
 - [Phase 9 — SFU Service (Group Calls) [✅ COMPLETED]](#phase-9--sfu-service-group-calls--completed)
-- [Phase 10 — Recording Service [⏳ PENDING]](#phase-10--recording-service--pending)
+- [Phase 10 — Recording Service [✅ COMPLETED]](#phase-10--recording-service--completed)
 - [Phase 11 — Notification Service [⏳ PENDING]](#phase-11--notification-service--pending)
 - [Phase 12 — Gateway Hardening [⏳ PENDING]](#phase-12--gateway-hardening--pending)
 - [Phase 13 — Observability [⏳ PENDING]](#phase-13--observability--pending)
@@ -274,7 +273,7 @@ flowchart TD
 
 ---
 
-## Phase 10 — Recording Service [🟡 IN PROGRESS]
+## Phase 10 — Recording Service [✅ COMPLETED]
 
 **Goal:** Downloadable video recordings produced asynchronously post-call.
 
@@ -287,8 +286,31 @@ flowchart TD
   - [x] Prisma models (`Recording` & `RecordingSegment`) created and migrated to `recording_db` (`20261017171008_init`).
   - [x] Env, clients (Redis, Room Service, SFU), middleware (authGuard, internalGuard), validation, controllers, routes.
   - [x] All 8 test scenarios verified: Health check (200), No token (401), Unknown room (404), Non-host token (403), Empty room (409), Start recording (201), Duplicate start (409), Stop recording (202), Webhook updates status to `PROCESSING` with segments and queues BullMQ job.
-- **Step 10.6 — BullMQ Finalize Worker (MKV to MP4):** ⏳ NEXT
-- **Steps 10.7 – 10.11:** ⏳ Pending (Storage/download, gateway proxy, signaling events, hardening).
+- **Step 10.6 — BullMQ Finalize Worker (MKV to MP4):** ✅ Done
+  - [x] Implemented safe FFmpeg/ffprobe runners (`ffmpeg.ts`).
+  - [x] Finalize recording logic (`finalizeRecording.ts`) with thumbnail generation, atomic rename, and failure reporting.
+  - [x] BullMQ queue and worker (`queues.ts`, `finalizeWorker.ts`) with retry and progress reporting.
+  - [x] Operator requeue CLI tool (`requeueFinalize.ts`), Dockerfile, and docker-compose setup.
+- **Step 10.7 — Storage Driver and Query APIs:** ✅ Done
+  - [x] Storage abstraction interface and local filesystem driver (`LocalStorageDriver`) with path traversal protection.
+  - [x] Express middleware updated for query schema validation (`res.locals.query`).
+  - [x] REST endpoints for listing, viewing, downloading with HTTP 206 Range seeking, and deleting recordings.
+- **Step 10.8 — Gateway Proxy:** ✅ Done
+  - [x] Reverse proxy configuration for `/api/v1/recordings` in API Gateway with JWT auth check and 10-minute timeout for streaming downloads.
+- **Step 10.9 — Signaling Recording Events:** ✅ Done
+  - [x] Dedicated Redis subscriber for `recording-events` channel in Signaling Service.
+  - [x] Room-scoped event dispatching (`recording-started`, `recording-stopped`, `recording-ready`, `recording-failed`) with deduplication.
+  - [x] Late joiner recording state synchronization in `joined` socket event.
+- **Step 10.10 — Docker Compose & E2E Test Suite:** ✅ Done
+  - [x] Container orchestration with shared `recordings_data` volume and environment configs.
+  - [x] End-to-end automated recording verification script (`scripts/e2e-recording.mjs`).
+- **Step 10.11 — Production Hardening:** ✅ Done
+  - [x] Prisma schema migration for `rawCleanedAt`.
+  - [x] Delayed BullMQ auto-stop worker for maximum duration enforcement (`recording-autostop`).
+  - [x] Storage disk guard with `statfs`, 503 capacity protection, and emergency stop policy.
+  - [x] Stale recording recovery engine for `STARTING`, `RECORDING`, `STOPPING`, and `PROCESSING` states.
+  - [x] Scheduled cleanup of retained raw files and abandoned temporary parts.
+  - [x] Distributed lock scheduler (`runExclusive`) and service readiness health endpoint (`/ready`).
 
 ---
 

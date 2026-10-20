@@ -1,7 +1,7 @@
 
 # Phase 10 — Recording Service: Design, Contracts & Build Guide
 
-> **Status:** 🟡 In Progress. Steps 10.1 to 10.5 are complete (Infra, SFU recorder, recording-service skeleton, DB, start/stop REST API & webhook verified). Next: Step 10.6 BullMQ finalize worker (MKV → MP4).
+> **Status:** ✅ Completed. Steps 10.1 to 10.11 are complete (Infra, SFU recorder, recording-service skeleton, DB, start/stop REST API & webhook, BullMQ finalize worker, storage driver & download APIs, gateway proxy, signaling events, docker-compose E2E, and production hardening).
 > **Goal:** the host presses Record, the call is captured on the server, and after the call the host gets downloadable MP4 files.
 > **How to use this file:** it holds the design, the contracts (API, events, DB) and the critical code. The full code for each step is written step by step while you build, the same way as Phase 9.
 
