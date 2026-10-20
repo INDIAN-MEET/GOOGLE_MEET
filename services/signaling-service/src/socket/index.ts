@@ -1,12 +1,12 @@
-import { Server } from 'socket.io'
+import { Server } from 'socket.io';
 import { socketAuth } from '../middleware/socketAuth.js';
 import { registerJoinRoom } from '../handlers/joinRoom.js';
 import { registerRelayHandlers } from '../handlers/relay.js';
 import { registerLeaveRoom } from '../handlers/leaveRoom.js';
 import { registerChatMessage } from '../handlers/chatMessage.js';
 import { registerSfuHandlers } from '../handlers/sfu.js'; 
+import { initRecordingEvents } from '../events/recordingEvents.js';
 import logger from '../utils/logger.js';
-
 
 /**  
  * @description Initialize socket.io server
@@ -14,16 +14,16 @@ import logger from '../utils/logger.js';
  * @returns {void}
  */
 export function initSocket(io: Server) {
-
-    io.use(socketAuth)
+    io.use(socketAuth);
     logger.info('Socket.io server initialized');
+    initRecordingEvents(io);
+
     io.on('connection', (socket) => {
         logger.info(`Socket ${socket.id} connected`);
-        registerJoinRoom(socket)
-        registerRelayHandlers(io, socket)
-        registerLeaveRoom(socket)
-        registerChatMessage(io, socket)   // ← chat relay + Redis publish
-        registerSfuHandlers(socket)
-    })
-
+        registerJoinRoom(socket);
+        registerRelayHandlers(io, socket);
+        registerLeaveRoom(socket);
+        registerChatMessage(io, socket);   // ← chat relay + Redis publish
+        registerSfuHandlers(socket);
+    });
 }

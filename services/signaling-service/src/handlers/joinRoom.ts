@@ -51,10 +51,14 @@ export function registerJoinRoom(socket: Socket) {
             socket.join(roomCode)
             socket.data.roomCode = roomCode
 
+            // STEP: read the active recording before sending "joined"
+            const activeRecordingId = await redis.get(`recording:active:${roomCode}`);
+
             // STEP 5
             socket.emit('joined', {
                 existingMembers: roomMembers,
                 mode,
+                recording: { active: !!activeRecordingId, recordingId: activeRecordingId ?? undefined },
             })
 
             logger.info(`Socket ${socket.id} joined room ${roomCode} (mode=${mode})`)
