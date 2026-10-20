@@ -48,6 +48,7 @@ services:
       - user-service
       - room-service
       - chat-service
+      - recording-service
 
   auth-service:
     build: ./services/auth-service
