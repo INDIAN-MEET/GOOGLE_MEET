@@ -31,3 +31,23 @@ export const captureEndedSchema = Joi.object({
     )
     .required(),
 });
+
+/** :id and :segmentId in the URL must both be UUIDs */
+export const segmentParamSchema = Joi.object({
+  id: Joi.string().guid().required(),
+  segmentId: Joi.string().guid().required(),
+});
+
+/** GET /recordings query: filters and pagination */
+export const listRecordingsQuerySchema = Joi.object({
+  roomCode: Joi.string().trim().max(64).optional(),
+  status: Joi.string().valid('STARTING', 'RECORDING', 'STOPPING', 'PROCESSING', 'READY', 'FAILED').optional(),
+  page: Joi.number().integer().min(1).default(1),
+  limit: Joi.number().integer().min(1).max(100).default(20),
+});
+
+/** GET /recordings/:id/download and /segments/:id/download query */
+export const downloadQuerySchema = Joi.object({
+  segmentId: Joi.string().guid().optional(),
+  download: Joi.boolean().truthy('1').falsy('0').default(false),
+});
