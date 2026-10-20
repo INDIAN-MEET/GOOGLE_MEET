@@ -1,7 +1,13 @@
 import { Router } from 'express';
 import { createProxyMiddleware, fixRequestBody } from 'http-proxy-middleware';
 import { gatewayAuth } from '../middleware/gatewayAuth.js';
-import { AUTH_SERVICE_URL, USER_SERVICE_URL, ROOM_SERVICE_URL, CHAT_SERVICE_URL } from '../config/env.js';
+import {
+  AUTH_SERVICE_URL,
+  USER_SERVICE_URL,
+  ROOM_SERVICE_URL,
+  CHAT_SERVICE_URL,
+  RECORDING_SERVICE_URL,
+} from '../config/env.js';
 
 const router = Router();
 
@@ -64,6 +70,24 @@ router.use(createProxyMiddleware({
     pathFilter: '/v1/chat',
     pathRewrite: { '^/v1/chat': '/api/v1/chat' },
     on: { proxyReq: fixRequestBody },
+}));
+
+/**
+ * Recording Service — entirely protected
+ * Client calls /api/v1/recordings/*
+ * Gateway mounts proxyRoutes at /api, so incoming path inside proxyRoutes is /v1/recordings/*
+ * recording-service mounts at /v1/recordings/*, so path matches as-is.
+ */
+router.use('/v1/recordings', gatewayAuth);
+
+router.use(createProxyMiddleware({
+  target: RECORDING_SERVICE_URL,
+  changeOrigin: true,
+  pathFilter: '/v1/recordings',
+  pathRewrite: { '^/v1/recordings': '/v1/recordings' },
+  proxyTimeout: 10 * 60_000,
+  timeout: 10 * 60_000,
+  on: { proxyReq: fixRequestBody },
 }));
 
 export default router;

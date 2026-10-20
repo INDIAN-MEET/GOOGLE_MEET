@@ -7,5 +7,5 @@ const adapter = new PrismaPg({
 });
 
 export const prisma = new PrismaClient({ adapter });
-
+export type { Recording, RecordingSegment, RecordingStatus, SegmentStatus } from "../../generated/prisma/client.ts";
 export default prisma;

@@ -43,12 +43,12 @@
 | 10.3 | SFU recorder module                                                     |              ✅ Done              |
 | 10.4 | Test the SFU recorder alone                                             |              ✅ Done              |
 | 10.5 | recording-service: skeleton, database, start/stop API, webhook          |              ✅ Done              |
-| 10.6 | BullMQ finalize worker (MKV → MP4)                                     |                ⏳                |
-| 10.7 | Storage and download                                                    |                ⏳                |
-| 10.8 | Gateway proxy                                                           |                ⏳                |
-| 10.9 | Signaling recording events                                              |                ⏳                |
-| 10.10 | Compose and end-to-end test                                             |                ⏳                |
-| 10.11 | Hardening (auto stop, recovery, cleanup, disk guard)                    |                ⏳                |
+| 10.6 | BullMQ finalize worker (MKV → MP4)                                     |              ✅ Done              |
+| 10.7 | Storage and download                                                    |              ✅ Done              |
+| 10.8 | Gateway proxy                                                           |              ✅ Done              |
+| 10.9 | Signaling recording events                                              |              ✅ Done              |
+| 10.10 | Compose and end-to-end test                                             |              ✅ Done              |
+| 10.11 | Hardening (auto stop, recovery, cleanup, disk guard)                    |              ✅ Done              |
 
 ### 1.3 Changes compared with the first guide (this file wins)
 
@@ -3643,6 +3643,7 @@ git checkout phase-10-recording-service
 - `/internal/*` is unreachable through the gateway.
 
 ## Where you are right now
-
-1. Run the Step 10.3.1 check (SDP script, `tsc`) and commit it.
-2. Build 10.3.2 to 10.3.6 in order, then test everything in Step 10.4 before touching recording-service.
+ 
+1. Steps 10.1 to 10.11 are completely implemented and committed.
+2. The entire recording pipeline (SFU capture, BullMQ worker, storage driver, API gateway proxy, signaling events, E2E test script, and hardening recovery/cleanup/autoStop) is ready.
+3. Next: Phase F (Frontend integration) and Phase 11 (Notification service).

@@ -17,8 +17,8 @@
 
 import * as runtime from "@prisma/client/runtime/index-browser"
 
-export type * from '../models.js'
-export type * from './prismaNamespace.js'
+export type * from '../models.ts'
+export type * from './prismaNamespace.ts'
 
 export const Decimal = runtime.Decimal
 
@@ -81,6 +81,7 @@ export const RecordingScalarFieldEnum = {
   durationMs: 'durationMs',
   thumbKey: 'thumbKey',
   error: 'error',
+  rawCleanedAt: 'rawCleanedAt',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const
