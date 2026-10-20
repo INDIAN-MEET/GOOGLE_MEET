@@ -17,7 +17,7 @@ const expected = hash(env.internalSecret);
 export function internalGuard(req: Request, _res: Response, next: NextFunction) {
   const provided = req.header('x-internal-secret');
   if (!provided || !timingSafeEqual(hash(provided), expected)) {
-    return next(new AppError('Forbidden', 403));
+    return next(new AppError('Unauthorized', 401));
   }
   next();
 }

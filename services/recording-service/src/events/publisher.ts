@@ -14,13 +14,10 @@ export interface RecordingEvent {
  * STEP 1: Send the event as JSON on the "recording-events" channel.
  * STEP 2: Never let a Redis problem break recording. Only log it.
  */
-
 export async function publishRecordingEvent(event: RecordingEvent): Promise<void> {
-
-    try {
-        redis.publish('recording-events', JSON.stringify(event))
-    } catch (err:any) {
-        logger.error({ err, event }, 'Failed to publish recording event')
-    }
-    
+  try {
+    await redis.publish('recording-events', JSON.stringify(event));
+  } catch (err: unknown) {
+    logger.error({ err, event }, 'Failed to publish recording event');
+  }
 }
