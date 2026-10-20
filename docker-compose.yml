@@ -139,6 +139,32 @@ services:
       - RECORDING_RTP_MAX_PORT=50200
     volumes:
       - recordings_data:/recordings
+
+  recording-service:
+    build: ./services/recording-service
+    container_name: recording-service
+    restart: unless-stopped
+    ports:
+      - "4007:4007"          # dev only
+    env_file:
+      - ./services/recording-service/.env.docker
+    environment:
+      - INTERNAL_SECRET=${INTERNAL_SECRET}
+      - SFU_SERVICE_URL=http://sfu-service:4006
+      - FFMPEG_PATH=${FFMPEG_PATH:-ffmpeg}
+    volumes:
+      - recordings_data:/recordings
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:4007/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    depends_on:
+      - postgres
+      - redis
+      - room-service
+      - sfu-service
+
   # ==========================================================================
   # NAT TRAVERSAL — STUN/TURN (Phase 7)
   # ==========================================================================
