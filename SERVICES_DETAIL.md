@@ -11,7 +11,7 @@ According to the master implementation plan in [`STEP.MD`](file:///c:/Users/swar
 
 ### Status Overview
 * **Phases 0 through 9** are **COMPLETED** (Infrastructure, API Gateway, Auth, User, Room, Signaling, WebRTC Verification Client, STUN/TURN, Chat, and SFU mediasoup Services).
-* **Phase 10** (Recording Service) is **IN PROGRESS** (Steps 10.1–10.5 completed; Step 10.5 start/stop REST API, SFU webhook & database segments verified). Next: Step 10.6 BullMQ finalize worker.
+* **Phase 10** (Recording Service) is **COMPLETED** (Steps 10.1–10.11 implemented: SFU RTP capture via PlainTransport & FFmpeg, start/stop REST APIs, capture-ended webhook, BullMQ MKV-to-MP4 finalize worker, storage driver & download APIs, API Gateway proxy, Signaling recording events & presence state, Docker Compose setup, and production hardening with auto-stop, boot recovery, disk guard, and retention cleanup).
 * **Phases 11 through 16** are pending implementation.
 
 | Phase | Service / Component | Status | Storage / Tech Stack | Primary Responsibility |
@@ -26,7 +26,7 @@ According to the master implementation plan in [`STEP.MD`](file:///c:/Users/swar
 | **Phase 7** | **TURN/STUN Infra** | ✅ Completed | Coturn (`turnserver.conf`), Auth HMAC | NAT traversal relay for cross-network media streaming |
 | **Phase 8** | **Chat Service** | ✅ Completed | MongoDB (`chat_db`), Mongoose, Redis | Async persistent room messaging & history retrieval |
 | **Phase 9** | **SFU Service** | ✅ Completed | `mediasoup`, Node.js | Multi-party group video calls (3+ participants) |
-| **Phase 10**| **Recording Service** | 🟡 In Progress | FFmpeg, BullMQ, Postgres (`recording_db`) | Steps 10.1–10.5 completed (SFU recorder, start/stop REST API, webhook & DB segments verified). Next: Step 10.6 BullMQ worker |
+| **Phase 10**| **Recording Service** | ✅ Completed | FFmpeg, BullMQ, Postgres (`recording_db`) | Server-side RTP capture, BullMQ MP4 transcode, REST download, events & lifecycle |
 | **Phase 11**| **Notification Service**| ❌ Pending | Nodemailer, Redis Queue | Email invites and scheduled reminders |
 | **Phase 12**| **Gateway Hardening** | ⏳ Partial | `express-rate-limit` | Throttling, centralized validation & security |
 | **Phase 13**| **Observability** | ⏳ Partial | Pino HTTP (Prometheus/Grafana planned) | Structured logging, metrics & tracing |
