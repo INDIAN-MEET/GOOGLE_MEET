@@ -293,7 +293,7 @@ CMD ["sh", "-c", "npx prisma migrate deploy && node dist/server.js"]
 
 ---
 
-## Step 11.3: Config and utilities
+## Step 11.3: Config and utilities	
 
 ### 11.3.1 File: `src/config/env.ts`
 

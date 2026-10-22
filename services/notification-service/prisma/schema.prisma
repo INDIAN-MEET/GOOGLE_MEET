@@ -1,0 +1,53 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+/// INVITE   = sent immediately when the host invites someone.
+/// REMINDER = sent later, shortly before the scheduled meeting time.
+enum NotificationType {
+  INVITE
+  REMINDER
+}
+
+/// Lifecycle: PENDING -> SENT | FAILED | CANCELLED
+enum NotificationStatus {
+  PENDING
+  SENT
+  FAILED
+  CANCELLED
+}
+
+model Notification {
+  id             String             @id @default(uuid())
+  type           NotificationType
+  status         NotificationStatus @default(PENDING)
+
+  recipientEmail String
+  roomCode       String
+  roomTitle      String?
+  hostName       String?
+  message        String?            /// optional personal note from the host
+
+  /// When the meeting starts (null for instant rooms).
+  meetingAt      DateTime?
+  /// When this email should be delivered.
+  sendAt         DateTime
+
+  /// BullMQ job id. Unique, so repeating the same invite cannot create duplicates.
+  jobId          String             @unique
+  attempts       Int                @default(0)
+  lastError      String?
+  sentAt         DateTime?
+
+  createdBy      String             /// userId of the host who triggered it
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  @@index([roomCode, status])
+  @@index([status, sendAt])
+}
