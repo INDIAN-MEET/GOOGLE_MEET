@@ -168,6 +168,41 @@ services:
       - sfu-service
 
   # ==========================================================================
+  # EMAIL & NOTIFICATIONS (Phase 11)
+  # ==========================================================================
+  # ---------------------------------------------------------------
+  # Mailpit: fake SMTP server for development.
+  #   SMTP  -> mailpit:1025  (the service sends here)
+  #   Web UI -> http://localhost:8025 (you read emails here)
+  # ---------------------------------------------------------------
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: mailpit
+    restart: unless-stopped
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+
+  # ---------------------------------------------------------------
+  # Notification service (Phase 11)
+  #   Port 4008 (sfu is 4006, recording is 4007)
+  # ---------------------------------------------------------------
+  notification-service:
+    build:
+      context: ./services/notification-service
+      dockerfile: Dockerfile
+    container_name: notification-service
+    restart: unless-stopped
+    ports:
+      - "4008:4008"
+    env_file:
+      - ./services/notification-service/.env.docker
+    depends_on:
+      - postgres
+      - redis
+      - mailpit
+
+  # ==========================================================================
   # NAT TRAVERSAL — STUN/TURN (Phase 7)
   # ==========================================================================
   coturn:

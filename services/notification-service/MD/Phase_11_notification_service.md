@@ -1,8 +1,7 @@
-
 # Phase 11: Notification Service (Detailed Build Guide)
 
 > **Service:** `services/notification-service`
-> **Port:** `4006` (4005 = chat, 4007 = recording, so 4006 is free)
+> **Port:** `4008` (4005 = chat, 4006 = sfu, 4007 = recording, so 4008 is for notifications)
 > **Database:** PostgreSQL `notification_db` (Prisma)
 > **Queue:** BullMQ on Redis
 > **Email:** Nodemailer (Mailpit in dev, real SMTP in prod)
@@ -37,7 +36,7 @@ I have not seen your source files, only the structure and docs. These are my ass
 ```mermaid
 flowchart LR
     U["Host (browser)"] -->|"POST /api/v1/notifications/invites"| GW["API Gateway :4000"]
-    GW --> NS["Notification Service :4006"]
+    GW --> NS["Notification Service :4008"]
     NS -->|"GET /v1/rooms/:code (host check)"| RS["Room Service :4003"]
     NS -->|"insert Notification rows"| DB[("notification_db")]
     NS -->|"add jobs (delay for reminders)"| Q[("Redis: BullMQ queue")]
@@ -165,7 +164,7 @@ CREATE DATABASE notification_db;
       dockerfile: Dockerfile
     container_name: notification-service
     ports:
-      - "4006:4006"
+      - "4008:4008"
     env_file:
       - ./services/notification-service/.env.docker
     depends_on:
@@ -232,12 +231,12 @@ Copy `recording-service/tsconfig.json` unchanged. If you need a starting point:
 }
 ```
 
-### 11.2.4 File: `services/notification-service/.env.example`
+### 11.2.4 File: `services/notification-service/		`
 
 ```env
 # --- Server ---
 NODE_ENV=development
-PORT=4006
+PORT=4008
 
 # --- Auth (same secret as every other service) ---
 JWT_ACCESS_SECRET=change-me
@@ -285,7 +284,7 @@ RUN npm ci
 COPY . .
 RUN npx prisma generate && npm run build
 
-EXPOSE 4006
+EXPOSE 4008
 # Run pending migrations, then start the compiled server
 CMD ["sh", "-c", "npx prisma migrate deploy && node dist/server.js"]
 ```
@@ -310,7 +309,7 @@ import Joi from "joi";
  */
 const schema = Joi.object({
   NODE_ENV: Joi.string().valid("development", "test", "production").default("development"),
-  PORT: Joi.number().port().default(4006),
+  PORT: Joi.number().port().default(4008),
 
   JWT_ACCESS_SECRET: Joi.string().min(8).required(),
   DATABASE_URL: Joi.string().uri().required(),
@@ -1669,7 +1668,7 @@ router.use(
   "/v1/notifications",
   gatewayAuth,
   createProxyMiddleware({
-    target: env.NOTIFICATION_SERVICE_URL, // e.g. http://notification-service:4006
+    target: env.NOTIFICATION_SERVICE_URL, // e.g. http://notification-service:4008
     changeOrigin: true,
     pathRewrite: { "^/v1/notifications": "/v1/notifications" },
     on: { proxyReq: fixRequestBody },
@@ -1804,8 +1803,8 @@ main().catch((e) => { console.error("\nE2E FAILED:", e.message); process.exit(1)
 Run top to bottom. Every box should pass before you call Phase 11 done.
 
 - [ ] `docker compose up --build -d` starts `notification-service` and `mailpit`
-- [ ] `GET http://localhost:4006/health` returns `{ "status": "ok" }`
-- [ ] `GET http://localhost:4006/ready` returns 200 with `postgres`, `redis`, `smtp` all `true`
+- [ ] `GET http://localhost:4008/health` returns `{ "status": "ok" }`
+- [ ] `GET http://localhost:4008/ready` returns 200 with `postgres`, `redis`, `smtp` all `true`
 - [ ] `POST /api/v1/notifications/invites` **without** a token returns 401
 - [ ] Same call as a **non-host** returns 403
 - [ ] Same call as host returns **202**, and the email shows in Mailpit (`http://localhost:8025`)
@@ -1852,7 +1851,7 @@ SELECT * FROM "Notification" WHERE status = 'FAILED';
 
 1. All boxes in the verification checklist are ticked.
 2. `STEP.MD` status table: Phase 11 changed to ✅ COMPLETED with a short summary.
-3. README updated: port 4006, `/api/v1/notifications` route, `room-events` Redis channel, Mailpit.
+3. README updated: port 4008, `/api/v1/notifications` route, `room-events` Redis channel, Mailpit.
 4. Commit and tag: `git tag v0.11-notifications`.
 
 **Next:** Phase 12, Gateway Hardening (rate limiting, centralized errors, request IDs).
