@@ -293,7 +293,7 @@ CMD ["sh", "-c", "npx prisma migrate deploy && node dist/server.js"]
 
 ---
 
-## Step 11.3: Config and utilities	
+## Step 11.3: Config and utilities
 
 ### 11.3.1 File: `src/config/env.ts`
 
@@ -1315,7 +1315,7 @@ export async function cancelRemindersForRoom(roomCode: string): Promise<number> 
 
 ## Step 11.9: HTTP API (controllers, routes, app, server)
 
-### 11.9.1 File: `src/controllers/inviteController.ts`
+### 11.9.1 File: `src/controllers/inviteController.ts`	
 
 ```ts
 import type { Request, Response } from "express";

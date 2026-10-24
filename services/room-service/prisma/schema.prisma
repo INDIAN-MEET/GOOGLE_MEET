@@ -17,6 +17,7 @@ model Room {
   hostUserId   String
   title        String?
   isActive     Boolean           @default(true)
+  scheduledAt  DateTime?
   createdAt    DateTime          @default(now())
   endedAt      DateTime?
   participants RoomParticipant[]

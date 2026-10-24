@@ -26,7 +26,7 @@ export const createRoomController = async (
     next: NextFunction
 ) => {
     try {
-        const { title } = req.body;
+        const { title, scheduledAt } = req.body;
         const roomCode = generateRoomCode();
         const userId = req.userId;
 
@@ -34,8 +34,13 @@ export const createRoomController = async (
             return next(new AppError('Unauthorized', 401));
         }
 
-        const room = await prisma.room.create({
-            data: { code: roomCode, title, hostUserId: userId }
+        const room = await (prisma.room.create as any)({
+            data: {
+                code: roomCode,
+                title,
+                hostUserId: userId,
+                scheduledAt: scheduledAt ? new Date(scheduledAt) : null,
+            }
         });
 
         logger.info({ room }, 'Room created');

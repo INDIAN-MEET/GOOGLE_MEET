@@ -6,7 +6,7 @@ import { AppError } from "../utils/AppError.ts";
 export interface RoomInfo {
   code: string;
   title: string | null;
-  hostId: string; // (A3) rename if your field is called ownerId / createdBy
+  hostId: string;
   scheduledAt: string | null; // ISO string or null for instant rooms
   status?: string;
 }
@@ -24,15 +24,23 @@ const http = axios.create({
  * @returns Room details used for host verification and reminder scheduling.
  * @throws AppError 404 if the room does not exist, 502 on other upstream failures.
  */
-
 export async function fetchRoom(roomCode: string, bearerToken: string): Promise<RoomInfo> {
   try {
     const res = await http.get(`/v1/rooms/${encodeURIComponent(roomCode)}`, {
       headers: { Authorization: `Bearer ${bearerToken}` },
     });
-    const room = res.data?.data?.room; // (A3) adjust if your response shape differs
-    if (!room) throw new AppError("Unexpected room-service response", 502);
-    return room as RoomInfo;
+    const raw = (res.data?.data?.room ?? res.data?.data) as Record<string, any> | undefined;
+    if (!raw) throw new AppError("Unexpected room-service response", 502);
+
+    const room: RoomInfo = {
+      code: raw.code,
+      title: raw.title ?? null,
+      hostId: raw.hostUserId ?? raw.hostId,
+      scheduledAt: raw.scheduledAt ?? null,
+      status: raw.isActive === false || raw.endedAt ? "ended" : (raw.status ?? "active"),
+    };
+
+    return room;
   } catch (err: any) {
     if (err instanceof AppError) throw err;
     if (err.response?.status === 404) throw new AppError("Room not found", 404);
