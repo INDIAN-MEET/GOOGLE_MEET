@@ -1,5 +1,3 @@
-	
-
 # Phase 11: Notification Service (Detailed Build Guide)
 
 > **Service:** `services/notification-service`
