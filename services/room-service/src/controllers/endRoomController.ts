@@ -3,6 +3,7 @@ import prisma from '../config/db.js';
 import AppError from '../utils/AppError.js';
 import { successResponse } from '../utils/response.js';
 import logger from '../utils/logger.js';
+import { publishRoomEvent } from '../events/publisher.js';
 
 /**
  * Permanently ends a room. Only the room's host may perform this action.
@@ -43,6 +44,8 @@ export const endRoomController = async (
             where: { code },
             data: { isActive: false, endedAt: new Date() }
         });
+
+        await publishRoomEvent('room-ended', { roomCode: code });
 
         logger.info({ room: updated }, 'Room ended');
         successResponse(res, { room: updated });
