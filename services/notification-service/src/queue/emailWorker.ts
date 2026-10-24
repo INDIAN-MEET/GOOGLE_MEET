@@ -1,11 +1,11 @@
 import { Worker, type Job } from "bullmq";
-import { env } from "../config/env";
-import { createRedis } from "../config/redis";
-import { prisma } from "../config/prisma";
-import { sendEmail } from "../email/sendEmail";
-import { renderInvite, renderReminder } from "../email/templates";
-import { logger } from "../utils/logger";
-import { EMAIL_QUEUE_NAME, type EmailJobData } from "./queues";
+import { env } from "../config/env.ts";
+import { createRedis } from "../config/redis.ts";
+import { prisma } from "../config/prisma.ts";
+import { sendEmail } from "../email/sendEmail.ts";
+import { renderInvite, renderReminder } from "../email/templates.ts";
+import { logger } from "../utils/logger.ts";
+import { EMAIL_QUEUE_NAME, type EmailJobData } from "./queues.ts";
 
 /**
  * Process one email job.

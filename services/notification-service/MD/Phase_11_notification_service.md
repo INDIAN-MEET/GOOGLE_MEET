@@ -1315,7 +1315,7 @@ export async function cancelRemindersForRoom(roomCode: string): Promise<number> 
 
 ## Step 11.9: HTTP API (controllers, routes, app, server)
 
-### 11.9.1 File: `src/controllers/inviteController.ts`
+### 11.9.1 File: `src/controllers/inviteController.ts`	
 
 ```ts
 import type { Request, Response } from "express";

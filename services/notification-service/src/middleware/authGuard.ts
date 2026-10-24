@@ -1,7 +1,18 @@
 import type { NextFunction, Request, Response } from "express";
 import jwt from "jsonwebtoken";
-import { env } from "../config/env";
-import { AppError } from "../utils/AppError";
+import { env } from "../config/env.ts";
+import { AppError } from "../utils/AppError.ts";
+
+declare global {
+  namespace Express {
+    interface Request {
+      /** Set by authGuard after the JWT is verified. */
+      userId?: string;
+      /** Raw access token, kept so we can forward it to room-service. */
+      accessToken?: string;
+    }
+  }
+}
 
 /**
  * Verify the `Authorization: Bearer <jwt>` header.
@@ -21,7 +32,7 @@ export function authGuard(req: Request, _res: Response, next: NextFunction): voi
     const userId = (payload.userId ?? payload.sub) as string | undefined; // (A2)
     if (!userId) return next(new AppError("Invalid token payload", 401));
 
-    req.userId = userId ;
+    req.userId = userId;
     req.accessToken = token;
     next();
   } catch {
