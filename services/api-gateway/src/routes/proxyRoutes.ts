@@ -7,6 +7,7 @@ import {
   ROOM_SERVICE_URL,
   CHAT_SERVICE_URL,
   RECORDING_SERVICE_URL,
+  NOTIFICATION_SERVICE_URL,
 } from '../config/env.js';
 
 const router = Router();
@@ -87,6 +88,22 @@ router.use(createProxyMiddleware({
   pathRewrite: { '^/v1/recordings': '/v1/recordings' },
   proxyTimeout: 10 * 60_000,
   timeout: 10 * 60_000,
+  on: { proxyReq: fixRequestBody },
+}));
+
+/**
+ * Notification Service — entirely protected
+ * Client calls /api/v1/notifications/*
+ * Gateway mounts proxyRoutes at /api, so incoming path is /v1/notifications/*
+ * notification-service mounts at /v1/notifications/*, so path matches as-is.
+ */
+router.use('/v1/notifications', gatewayAuth);
+
+router.use(createProxyMiddleware({
+  target: NOTIFICATION_SERVICE_URL,
+  changeOrigin: true,
+  pathFilter: '/v1/notifications',
+  pathRewrite: { '^/v1/notifications': '/v1/notifications' },
   on: { proxyReq: fixRequestBody },
 }));
 

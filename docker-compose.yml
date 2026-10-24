@@ -49,6 +49,7 @@ services:
       - room-service
       - chat-service
       - recording-service
+      - notification-service
 
   auth-service:
     build: ./services/auth-service
@@ -84,6 +85,7 @@ services:
       - ./services/room-service/.env.docker
     depends_on:
       - postgres
+      - redis
       - auth-service
 
   signaling-service:
