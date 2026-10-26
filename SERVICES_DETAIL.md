@@ -10,9 +10,8 @@
 According to the master implementation plan in [`STEP.MD`](file:///c:/Users/swaru/OneDrive/Desktop/PROJECT/GOOGLE_MEET/STEP.MD), the project follows a **16-Phase Microservices Build Order**. 
 
 ### Status Overview
-* **Phases 0 through 9** are **COMPLETED** (Infrastructure, API Gateway, Auth, User, Room, Signaling, WebRTC Verification Client, STUN/TURN, Chat, and SFU mediasoup Services).
-* **Phase 10** (Recording Service) is **COMPLETED** (Steps 10.1–10.11 implemented: SFU RTP capture via PlainTransport & FFmpeg, start/stop REST APIs, capture-ended webhook, BullMQ MKV-to-MP4 finalize worker, storage driver & download APIs, API Gateway proxy, Signaling recording events & presence state, Docker Compose setup, and production hardening with auto-stop, boot recovery, disk guard, and retention cleanup).
-* **Phases 11 through 16** are pending implementation.
+* **Phases 0 through 11** are **COMPLETED** (Infrastructure, API Gateway, Auth, User, Room, Signaling, WebRTC Verification Client, STUN/TURN, Chat, SFU mediasoup, Recording, and Notification Services).
+* **Phases 12 through 16** and **Phase F** are pending implementation.
 
 | Phase | Service / Component | Status | Storage / Tech Stack | Primary Responsibility |
 | :--- | :--- | :---: | :--- | :--- |
@@ -27,7 +26,7 @@ According to the master implementation plan in [`STEP.MD`](file:///c:/Users/swar
 | **Phase 8** | **Chat Service** | ✅ Completed | MongoDB (`chat_db`), Mongoose, Redis | Async persistent room messaging & history retrieval |
 | **Phase 9** | **SFU Service** | ✅ Completed | `mediasoup`, Node.js | Multi-party group video calls (3+ participants) |
 | **Phase 10**| **Recording Service** | ✅ Completed | FFmpeg, BullMQ, Postgres (`recording_db`) | Server-side RTP capture, BullMQ MP4 transcode, REST download, events & lifecycle |
-| **Phase 11**| **Notification Service**| ❌ Pending | Nodemailer, Redis Queue | Email invites and scheduled reminders |
+| **Phase 11**| **Notification Service**| ✅ Completed | Nodemailer, Mailpit, BullMQ, Postgres (`notification_db`) | Email meeting invitations, scheduled meeting reminders, cancellation on room end |
 | **Phase 12**| **Gateway Hardening** | ⏳ Partial | `express-rate-limit` | Throttling, centralized validation & security |
 | **Phase 13**| **Observability** | ⏳ Partial | Pino HTTP (Prometheus/Grafana planned) | Structured logging, metrics & tracing |
 | **Phase 14**| **CI/CD** | ❌ Pending | GitHub Actions | Automated lint, build, test & deploy pipelines |
@@ -146,6 +145,47 @@ According to the master implementation plan in [`STEP.MD`](file:///c:/Users/swar
 
 ---
 
+### 9. SFU Service (`/services/sfu-service`)
+* **Port:** `4006` (RTC range: `20000-20050` UDP)
+* **Tech Stack:** Node.js, TypeScript, `mediasoup v3`, Socket.io
+* **Role:** Selective Forwarding Unit for multi-party group video calls (3+ participants).
+* **Capabilities & Functionality:**
+  - **Mediasoup Worker & Router Orchestration:** Spawns C++ mediasoup workers pinned to CPU cores, dynamically allocating video/audio routers per meeting room.
+  - **WebRTC Transport Negotiation:** Coordinates `WebRtcTransport` creation (`createSendTransport`, `createRecvTransport`), DTLS parameters, and ICE candidate exchange.
+  - **Multi-stream Ingestion & Distribution:** Consumes individual audio, video, and screen-share streams and fans out RTP packets to active consumers with dynamic spatial/temporal simulcast layer switching.
+  - **RTP Capabilities Exchange:** Validates browser codecs (VP8, H.264, Opus) and negotiates RTP capabilities before producer generation.
+
+---
+
+### 10. Recording Service (`/services/recording-service`)
+* **Port:** `4007`
+* **Database:** PostgreSQL (`recording_db` via Prisma)
+* **Tech Stack:** Express, TypeScript, Prisma, BullMQ, Redis, `fluent-ffmpeg`, mediasoup `PlainTransport`
+* **Role:** High-fidelity server-side meeting recording, audio/video transcoding, and playback/download delivery.
+* **Capabilities & Functionality:**
+  - **PlainTransport RTP Pipe:** Connects directly to SFU audio/video producers via mediasoup `PlainTransport` using loopback UDP sockets, capturing raw RTP without client overhead.
+  - **BullMQ Async Transcode Queue:** Jobs dispatched to Redis queue upon recording stop, executed by dedicated background workers running `fluent-ffmpeg` to produce web-optimized `.mp4` containers.
+  - **Storage & Lifecycle Management:** Tracks metadata, duration, file size, and recording states (`STARTING`, `RECORDING`, `PROCESSING`, `COMPLETED`, `FAILED`) in `recording_db`.
+  - **Secure Download & Streaming API (`/v1/recordings`):** Provides protected endpoints for recording initiation, stoppage, status polling, and stream downloads.
+  - **Room End Webhook / Redis Cleanup:** Automatically flushes ongoing recordings and releases transport resources if a host terminates a room.
+
+---
+
+### 11. Notification Service (`/services/notification-service`)
+* **Port:** `4008`
+* **Database:** PostgreSQL (`notification_db` via Prisma)
+* **Tech Stack:** Express, TypeScript, Prisma, BullMQ, Redis, Nodemailer, Mailpit (dev SMTP)
+* **Role:** Asynchronous email dispatch for meeting invitations and scheduled meeting reminders with automatic cancellation.
+* **Capabilities & Functionality:**
+  - **Dual BullMQ Queue Architecture:**
+    - `inviteQueue`: Immediate transactional delivery of meeting invitation emails to guest email lists with join links and room details.
+    - `reminderQueue`: Delayed jobs scheduled exactly 15 minutes prior to meeting `scheduledAt` timestamp with deduplication IDs (`reminder:<inviteId>`).
+  - **Automatic Cancellation on Room End / Host Delete:** Subscribes to Redis room event channels or processes room-end signals to cancel scheduled reminder jobs and update reminder status to `CANCELLED`.
+  - **Delivery Tracking & Auditing:** Persists full invitation lifecycle (`PENDING`, `SENT`, `FAILED`) and reminder states (`SCHEDULED`, `SENT`, `CANCELLED`) with retry policies and exponential backoff in `notification_db`.
+  - **Mailpit Integration:** Seamless zero-configuration SMTP testing via Docker container at `mailpit:1025` with interactive web inbox at `http://localhost:8025`.
+
+---
+
 ## 🏗️ 3. Architecture & Data Flow
 
 ```mermaid
@@ -164,35 +204,46 @@ flowchart TD
         ROOM["🚪 Room Service (Port 4003)"]
         CHAT["💬 Chat Service (Port 4005)"]
         SIGNAL["⚡ Signaling Service (Port 4004 - WS)"]
+        SFU["🎥 SFU Service (Port 4006)"]
+        REC["⏺️ Recording Service (Port 4007)"]
+        NOTIF["📬 Notification Service (Port 4008)"]
     end
 
     subgraph Data Stores
         PG_AUTH[("🐘 Postgres: auth_db")]
         PG_USER[("🐘 Postgres: user_db")]
         PG_ROOM[("🐘 Postgres: room_db")]
+        PG_REC[("🐘 Postgres: recording_db")]
+        PG_NOTIF[("🐘 Postgres: notification_db")]
         MONGO[("🍃 MongoDB: chat_db")]
-        REDIS[("⚡ Redis (Pub/Sub & Presence)")]
+        REDIS[("⚡ Redis (Pub/Sub, Queues, Presence)")]
     end
 
-    subgraph NAT Traversal
+    subgraph Mail & Media
+        MAILPIT["✉️ Mailpit (SMTP :1025 / UI :8025)"]
         COTURN["📡 Coturn (STUN/TURN)"]
     end
 
     %% Client Interactions
     Browser -- "HTTP Requests" --> GW
     Browser -- "WebSocket (WSS)" --> SIGNAL
-    Browser -- "WebRTC Media Streams" --> COTURN
+    Browser -- "WebRTC Media" --> COTURN
+    Browser -- "Mediasoup RTC" --> SFU
 
     %% Gateway Routing
     GW -- "/api/auth" --> AUTH
     GW -- "/api/users" --> USER
     GW -- "/api/v1/rooms" --> ROOM
     GW -- "/api/v1/chat" --> CHAT
+    GW -- "/api/v1/recordings" --> REC
+    GW -- "/api/v1/notifications" --> NOTIF
 
     %% Service to DB
     AUTH --> PG_AUTH
     USER --> PG_USER
     ROOM --> PG_ROOM
+    REC --> PG_REC
+    NOTIF --> PG_NOTIF
     CHAT --> MONGO
 
     %% Inter-service & Event Flows
@@ -203,31 +254,32 @@ flowchart TD
     REDIS -- "Subscribes chat-message" --> CHAT
     ROOM -- "REST Verify Token" --> AUTH
     SIGNAL -- "REST Verify Token" --> AUTH
+
+    %% Media & Notification pipelines
+    SFU -- "PlainTransport RTP" --> REC
+    REC -- "BullMQ Jobs" --> REDIS
+    NOTIF -- "BullMQ Invites & Reminders" --> REDIS
+    NOTIF -- "SMTP Email Dispatch" --> MAILPIT
 ```
 
 ---
 
-## 🚀 4. Remaining Roadmap (Phases 9 to 16)
+## 🚀 4. Remaining Roadmap (Phases 12 to 16 & Phase F)
 
 To transform this into a production-ready enterprise WebRTC platform, the following phases outlined in [`STEP.MD`](file:///c:/Users/swaru/OneDrive/Desktop/PROJECT/GOOGLE_MEET/STEP.MD) remain to be built:
 
-1. **Phase 9 — SFU Service (`/services/sfu-service`)**:  
-   - Integrate `mediasoup` workers and routers.  
-   - Enable high-capacity multi-party video conferencing (3+ participants) by routing streams through an SFU server instead of full-mesh peer connections.
-2. **Phase 10 — Recording Service**:  
-   - Implement mediasoup `PlainTransport` and `fluent-ffmpeg` workers managed via a Redis job queue (`BullMQ`) to export `.mp4` recordings to S3/Blob storage.
-3. **Phase 11 — Notification Service**:  
-   - Async email notification worker using `nodemailer` for meeting invitations and scheduled reminders.
-4. **Phase 12 — Gateway Hardening**:  
+1. **Phase 12 — Gateway Hardening**:  
    - Add rate limiting (`express-rate-limit`), centralized error sanitization, and WebSocket proxying.
-5. **Phase 13 — Observability**:  
-   - Export Prometheus metrics (`/metrics`), Grafana dashboards, and OpenTelemetry tracing across all microservices.
-6. **Phase 14 — CI/CD Pipeline**:  
+2. **Phase 13 — Observability**:  
+   - Export Prometheus metrics (`/metrics`), Grafana dashboards, and OpenTelemetry distributed tracing across all microservices.
+3. **Phase 14 — CI/CD Pipeline**:  
    - Setup GitHub Actions workflows to lint, test, build Docker images, and apply database migrations automatically.
-7. **Phase 15 — Kubernetes Deployment**:  
+4. **Phase 15 — Kubernetes Deployment**:  
    - Provision Helm charts, ingress controllers, HPAs (Horizontal Pod Autoscalers), and StatefulSets for Coturn.
-8. **Phase 16 — Load Testing & Security**:  
-   - Conduct Artillery load tests and security hardening.
+5. **Phase 16 — Load Testing & Security**:  
+   - Conduct Artillery load tests, PgBouncer pooling, and security penetration hardening.
+6. **Phase F — Next.js 15 Full Frontend Client**:  
+   - Complete Google Meet clone UI with responsive grid, screenshare, chat, host controls, and recording playback.
 
 ---
 

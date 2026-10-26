@@ -1,6 +1,7 @@
 # Phase 11: Notification Service (Detailed Build Guide)
 
 > **Service:** `services/notification-service`
+> **Status:** ✅ **COMPLETED** (Steps 11.1 – 11.14 verified with `e2e-notification.mjs`)
 > **Port:** `4008` (4005 = chat, 4006 = sfu, 4007 = recording, so 4008 is for notifications)
 > **Database:** PostgreSQL `notification_db` (Prisma)
 > **Queue:** BullMQ on Redis
@@ -1802,17 +1803,17 @@ main().catch((e) => { console.error("\nE2E FAILED:", e.message); process.exit(1)
 
 Run top to bottom. Every box should pass before you call Phase 11 done.
 
-- [ ] `docker compose up --build -d` starts `notification-service` and `mailpit`
-- [ ] `GET http://localhost:4008/health` returns `{ "status": "ok" }`
-- [ ] `GET http://localhost:4008/ready` returns 200 with `postgres`, `redis`, `smtp` all `true`
-- [ ] `POST /api/v1/notifications/invites` **without** a token returns 401
-- [ ] Same call as a **non-host** returns 403
-- [ ] Same call as host returns **202**, and the email shows in Mailpit (`http://localhost:8025`)
-- [ ] Sending the same invite twice creates **no duplicate** rows
-- [ ] For a room scheduled 20 min ahead, **2 reminder rows** exist with `status = PENDING`
-- [ ] Ending the room changes those rows to `CANCELLED` and no reminder email is ever sent
-- [ ] Stop Mailpit, send an invite: the row shows `attempts` increasing, then `FAILED` after 5 tries. Start Mailpit before the final attempt and it becomes `SENT`
-- [ ] `node scripts/e2e-notification.mjs` prints `ALL CHECKS PASSED`
+- [x] `docker compose up --build -d` starts `notification-service` and `mailpit`
+- [x] `GET http://localhost:4008/health` returns `{ "status": "ok" }`
+- [x] `GET http://localhost:4008/ready` returns 200 with `postgres`, `redis`, `smtp` all `true`
+- [x] `POST /api/v1/notifications/invites` **without** a token returns 401
+- [x] Same call as a **non-host** returns 403
+- [x] Same call as host returns **202**, and the email shows in Mailpit (`http://localhost:8025`)
+- [x] Sending the same invite twice creates **no duplicate** rows
+- [x] For a room scheduled 20 min ahead, **2 reminder rows** exist with `status = PENDING`
+- [x] Ending the room changes those rows to `CANCELLED` and no reminder email is ever sent
+- [x] Stop Mailpit, send an invite: the row shows `attempts` increasing, then `FAILED` after 5 tries. Start Mailpit before the final attempt and it becomes `SENT`
+- [x] `node scripts/e2e-notification.mjs` prints `ALL CHECKS PASSED`
 
 ### Quick way to test reminders without waiting 15 minutes
 

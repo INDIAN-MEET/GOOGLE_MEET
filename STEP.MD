@@ -1,7 +1,7 @@
 # Video Meet App — Detailed File-by-File Build Steps & Execution Checklist
 
-> **Current Implementation Status:** Phases 0 through 10 are **✅ COMPLETED**.
-> Phases 11 through 16 and Phase F are **⏳ NEXT / PENDING**.
+> **Current Implementation Status:** Phases 0 through 11 are **✅ COMPLETED**.
+> Phases 12 through 16 and Phase F are **⏳ NEXT / PENDING**.
 
 ---
 
@@ -20,7 +20,7 @@
 | **Phase 8**  | **Chat Service**         | ✅ COMPLETED | Port 4005. MongoDB Mongoose schema, Redis subscriber to`chat-message`, history REST API.               |
 | **Phase 9**  | **SFU Service**          | ✅ COMPLETED | Backend service complete: mediasoup workers, routers, transports, producers, consumers, auth, signaling integration & room mode. Frontend in Phase F. |
 | **Phase 10** | **Recording Service**    | ✅ COMPLETED | Port 4007, `recording_db`. SFU captures per-peer RTP with FFmpeg (copy mode), BullMQ worker converts to MP4, REST API, Redis events to signaling, auto stop, recovery. Frontend part in Phase F. |
-| **Phase 11** | **Notification Service** |  ⏳ PENDING  | Nodemailer / email worker for scheduled invites & meeting reminders.                                     |
+| **Phase 11** | **Notification Service** | ✅ COMPLETED | Port 4008, `notification_db`. Nodemailer + Mailpit, BullMQ async email queue for room invites & scheduled reminders, Redis room-events subscriber, cancellation on room-end, Gateway proxy (`/api/v1/notifications/*`). Verified via `e2e-notification.mjs`. |
 | **Phase 12** | **Gateway Hardening**    |  ⏳ PENDING  | Rate limiting (`express-rate-limit`) & centralized error handler validation.                           |
 | **Phase 13** | **Observability**        |  ⏳ PENDING  | Prometheus`/metrics`, Grafana dashboards & OpenTelemetry tracing.                                      |
 | **Phase 14** | **CI/CD**                |  ⏳ PENDING  | GitHub Actions automated workflows for linting, testing, and Docker builds.                              |
@@ -43,7 +43,7 @@
 - [Phase 8 — Chat Service [✅ COMPLETED]](#phase-8--chat-service--completed)
 - [Phase 9 — SFU Service (Group Calls) [✅ COMPLETED]](#phase-9--sfu-service-group-calls--completed)
 - [Phase 10 — Recording Service [✅ COMPLETED]](#phase-10--recording-service--completed)
-- [Phase 11 — Notification Service [⏳ PENDING]](#phase-11--notification-service--pending)
+- [Phase 11 — Notification Service [✅ COMPLETED]](#phase-11--notification-service--completed)
 - [Phase 12 — Gateway Hardening [⏳ PENDING]](#phase-12--gateway-hardening--pending)
 - [Phase 13 — Observability [⏳ PENDING]](#phase-13--observability--pending)
 - [Phase 14 — CI/CD [⏳ PENDING]](#phase-14--cicd--pending)
@@ -314,16 +314,24 @@ flowchart TD
 
 ---
 
-## Phase 11 — Notification Service [⏳ PENDING]
+## Phase 11 — Notification Service [✅ COMPLETED]
 
-**Goal:** Async email invitations and scheduled meeting reminders.
+**Goal:** Async email invitations and scheduled meeting reminders via BullMQ and Nodemailer (Mailpit in dev).
 
-```mermaid
-flowchart TD
-    S1["Step 11.1<br/>Install nodemailer"] --> S2["Step 11.2<br/>Queue job on room invite"]
-    S2 --> S3["Step 11.3<br/>Worker sends email"]
-    S3 --> S4["Step 11.4<br/>Scheduled job for reminders"]
-```
+- **Step 11.1 — Infrastructure:** ✅ Done (`notification_db` in PostgreSQL init, `mailpit` container on ports 1025/8025, and `notification-service` on port 4008 in `docker-compose.yml`).
+- **Step 11.2 — Service Scaffolding:** ✅ Done (`services/notification-service` package.json, tsconfig.json with NodeNext & types, .env.docker, Dockerfile with openssl).
+- **Step 11.3 — Configuration & Utilities:** ✅ Done (Joi `env.ts`, PrismaPg client, dual Redis connections for BullMQ & general, `roomServiceClient.ts`, `AppError.ts`, `asyncHandler.ts`, `logger.ts`).
+- **Step 11.4 — Database Schema & Migration:** ✅ Done (`Notification` model with `NotificationType` / `NotificationStatus` enums, `prisma.config.ts`, migration `20261024080318_init` applied to `notification_db`).
+- **Step 11.5 — Middleware & Validation:** ✅ Done (JWT `authGuard.ts`, `errorHandler.ts`, `validate.ts`, Joi `notificationSchemas.ts`, Express Request typing).
+- **Step 11.6 — Email Pipeline & Templates:** ✅ Done (Nodemailer transporter for Mailpit/SMTP, HTML/plain-text templates for invites and reminders, safe email sender).
+- **Step 11.7 — BullMQ Queue & Worker:** ✅ Done (`emailQueue` with exponential backoff and `emailWorker` with concurrency and retries).
+- **Step 11.8 — Notification Business Logic:** ✅ Done (`createInvites` with email deduping, immediate invite dispatch, scheduled reminders, idempotency on jobId, and `cancelRemindersForRoom`).
+- **Step 11.9 — HTTP REST API:** ✅ Done (`POST /v1/notifications/invites`, `GET /health`, `GET /ready`, Express app, server boot with graceful shutdown).
+- **Step 11.10 — Room Service Scheduled Meetings & Events:** ✅ Done (`scheduledAt` field on `Room` model in `room_db`, validation, persistence, and `publishRoomEvent('room-ended')` via Redis).
+- **Step 11.11 — Room Lifecycle Event Subscriber:** ✅ Done (`roomEventsSubscriber.ts` listening to `room-events` Redis channel to cancel pending reminders and update DB rows on room teardown).
+- **Step 11.12 — API Gateway Reverse Proxy:** ✅ Done (`/v1/notifications` route with `gatewayAuth` proxying to `http://notification-service:4008`).
+- **Step 11.13 — Automated E2E Test Suite:** ✅ Done (`scripts/e2e-notification.mjs` verifying signup, scheduled room, non-host rejection, Mailpit delivery, reminder deduplication, and cancellation).
+- **Step 11.14 — Production Verification:** ✅ Done (Docker image built, containers running, `/health` and `/ready` 200, E2E tests passed).
 
 ---
 
@@ -399,8 +407,8 @@ flowchart TD
     style P7 fill:#e8ffe8,stroke:#3fae3f
     style P8 fill:#e8ffe8,stroke:#3fae3f
     style P9 fill:#e8ffe8,stroke:#3fae3f
-    style P10 fill:#fff4e0,stroke:#d99a2b
-    style P11 fill:#fff4e0,stroke:#d99a2b
+    style P10 fill:#e8ffe8,stroke:#3fae3f
+    style P11 fill:#e8ffe8,stroke:#3fae3f
     style P12 fill:#fff4e0,stroke:#d99a2b
     style PF fill:#fff4e0,stroke:#d99a2b
     style P13 fill:#fff4e0,stroke:#d99a2b
