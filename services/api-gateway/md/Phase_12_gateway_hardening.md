@@ -2,6 +2,7 @@
 # Phase 12: API Gateway Hardening (Detailed Build Guide)
 
 > **Service:** `services/api-gateway`  |  **Port:** `4000`  |  **Database:** none (uses Redis only for rate-limit counters)
+> **Status:** ✅ **COMPLETED** (Steps 12.1 – 12.14 implemented & verified)
 > **Tech:** Express 5, TypeScript, `http-proxy-middleware` v4, `express-rate-limit`, `rate-limit-redis`, `ioredis`, Helmet, pino
 > **Depends on:** Phases 0-11 complete, Redis container running
 > **Result:** the gateway can survive abuse, hides internal details, and tells you exactly which request failed.

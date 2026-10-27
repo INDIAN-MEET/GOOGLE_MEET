@@ -10,8 +10,8 @@
 According to the master implementation plan in [`STEP.MD`](file:///c:/Users/swaru/OneDrive/Desktop/PROJECT/GOOGLE_MEET/STEP.MD), the project follows a **16-Phase Microservices Build Order**. 
 
 ### Status Overview
-* **Phases 0 through 11** are **COMPLETED** (Infrastructure, API Gateway, Auth, User, Room, Signaling, WebRTC Verification Client, STUN/TURN, Chat, SFU mediasoup, Recording, and Notification Services).
-* **Phases 12 through 16** and **Phase F** are pending implementation.
+* **Phases 0 through 12** are **COMPLETED** (Infrastructure, API Gateway with Phase 12 Hardening, Auth, User, Room, Signaling, WebRTC Verification Client, STUN/TURN, Chat, SFU mediasoup, Recording, and Notification Services).
+* **Phases 13 through 16** and **Phase F** are pending implementation.
 
 | Phase | Service / Component | Status | Storage / Tech Stack | Primary Responsibility |
 | :--- | :--- | :---: | :--- | :--- |
@@ -27,7 +27,7 @@ According to the master implementation plan in [`STEP.MD`](file:///c:/Users/swar
 | **Phase 9** | **SFU Service** | ✅ Completed | `mediasoup`, Node.js | Multi-party group video calls (3+ participants) |
 | **Phase 10**| **Recording Service** | ✅ Completed | FFmpeg, BullMQ, Postgres (`recording_db`) | Server-side RTP capture, BullMQ MP4 transcode, REST download, events & lifecycle |
 | **Phase 11**| **Notification Service**| ✅ Completed | Nodemailer, Mailpit, BullMQ, Postgres (`notification_db`) | Email meeting invitations, scheduled meeting reminders, cancellation on room end |
-| **Phase 12**| **Gateway Hardening** | ⏳ Partial | `express-rate-limit` | Throttling, centralized validation & security |
+| **Phase 12**| **Gateway Hardening** | ✅ Completed | Express 5, `express-rate-limit`, `rate-limit-redis`, ioredis | Tiered rate limiting, proxy error trap (502/504), request ID tracing, /health & /ready |
 | **Phase 13**| **Observability** | ⏳ Partial | Pino HTTP (Prometheus/Grafana planned) | Structured logging, metrics & tracing |
 | **Phase 14**| **CI/CD** | ❌ Pending | GitHub Actions | Automated lint, build, test & deploy pipelines |
 | **Phase 15**| **Kubernetes (K8s)** | ❌ Pending | K8s Manifests, Helm | Container orchestration for production |
@@ -264,21 +264,19 @@ flowchart TD
 
 ---
 
-## 🚀 4. Remaining Roadmap (Phases 12 to 16 & Phase F)
+## 🚀 4. Remaining Roadmap (Phases 13 to 16 & Phase F)
 
 To transform this into a production-ready enterprise WebRTC platform, the following phases outlined in [`STEP.MD`](file:///c:/Users/swaru/OneDrive/Desktop/PROJECT/GOOGLE_MEET/STEP.MD) remain to be built:
 
-1. **Phase 12 — Gateway Hardening**:  
-   - Add rate limiting (`express-rate-limit`), centralized error sanitization, and WebSocket proxying.
-2. **Phase 13 — Observability**:  
+1. **Phase 13 — Observability**:  
    - Export Prometheus metrics (`/metrics`), Grafana dashboards, and OpenTelemetry distributed tracing across all microservices.
-3. **Phase 14 — CI/CD Pipeline**:  
+2. **Phase 14 — CI/CD Pipeline**:  
    - Setup GitHub Actions workflows to lint, test, build Docker images, and apply database migrations automatically.
-4. **Phase 15 — Kubernetes Deployment**:  
+3. **Phase 15 — Kubernetes Deployment**:  
    - Provision Helm charts, ingress controllers, HPAs (Horizontal Pod Autoscalers), and StatefulSets for Coturn.
-5. **Phase 16 — Load Testing & Security**:  
+4. **Phase 16 — Load Testing & Security**:  
    - Conduct Artillery load tests, PgBouncer pooling, and security penetration hardening.
-6. **Phase F — Next.js 15 Full Frontend Client**:  
+5. **Phase F — Next.js 15 Full Frontend Client**:  
    - Complete Google Meet clone UI with responsive grid, screenshare, chat, host controls, and recording playback.
 
 ---

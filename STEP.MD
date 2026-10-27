@@ -1,7 +1,7 @@
 # Video Meet App — Detailed File-by-File Build Steps & Execution Checklist
 
-> **Current Implementation Status:** Phases 0 through 11 are **✅ COMPLETED**.
-> Phases 12 through 16 and Phase F are **⏳ NEXT / PENDING**.
+> **Current Implementation Status:** Phases 0 through 12 are **✅ COMPLETED**.
+> Phases 13 through 16 and Phase F are **⏳ NEXT / PENDING**.
 
 ---
 
@@ -21,7 +21,7 @@
 | **Phase 9**  | **SFU Service**          | ✅ COMPLETED | Backend service complete: mediasoup workers, routers, transports, producers, consumers, auth, signaling integration & room mode. Frontend in Phase F. |
 | **Phase 10** | **Recording Service**    | ✅ COMPLETED | Port 4007, `recording_db`. SFU captures per-peer RTP with FFmpeg (copy mode), BullMQ worker converts to MP4, REST API, Redis events to signaling, auto stop, recovery. Frontend part in Phase F. |
 | **Phase 11** | **Notification Service** | ✅ COMPLETED | Port 4008, `notification_db`. Nodemailer + Mailpit, BullMQ async email queue for room invites & scheduled reminders, Redis room-events subscriber, cancellation on room-end, Gateway proxy (`/api/v1/notifications/*`). Verified via `e2e-notification.mjs`. |
-| **Phase 12** | **Gateway Hardening**    |  ⏳ PENDING  | Rate limiting (`express-rate-limit`) & centralized error handler validation.                           |
+| **Phase 12** | **Gateway Hardening**    | ✅ COMPLETED | Port 4000. Express 5 + http-proxy-middleware v4. Tiered Redis rate limiting, proxy error trap (sanitized 502/504), x-request-id tracing, anti-spoofing header cleanup, slowloris timeouts, graceful shutdown, /health & /ready probes. Verified via `e2e-gateway.mjs`. |
 | **Phase 13** | **Observability**        |  ⏳ PENDING  | Prometheus`/metrics`, Grafana dashboards & OpenTelemetry tracing.                                      |
 | **Phase 14** | **CI/CD**                |  ⏳ PENDING  | GitHub Actions automated workflows for linting, testing, and Docker builds.                              |
 | **Phase 15** | **Kubernetes (K8s)**     |  ⏳ PENDING  | K8s deployments, ingress routing, HPA for signaling/SFU, Coturn StatefulSet.                             |
@@ -44,7 +44,7 @@
 - [Phase 9 — SFU Service (Group Calls) [✅ COMPLETED]](#phase-9--sfu-service-group-calls--completed)
 - [Phase 10 — Recording Service [✅ COMPLETED]](#phase-10--recording-service--completed)
 - [Phase 11 — Notification Service [✅ COMPLETED]](#phase-11--notification-service--completed)
-- [Phase 12 — Gateway Hardening [⏳ PENDING]](#phase-12--gateway-hardening--pending)
+- [Phase 12 — Gateway Hardening [✅ COMPLETED]](#phase-12--gateway-hardening--completed)
 - [Phase 13 — Observability [⏳ PENDING]](#phase-13--observability--pending)
 - [Phase 14 — CI/CD [⏳ PENDING]](#phase-14--cicd--pending)
 - [Phase 15 — Kubernetes Deployment [⏳ PENDING]](#phase-15--kubernetes-deployment--pending)
@@ -335,10 +335,24 @@ flowchart TD
 
 ---
 
-## Phase 12 — Gateway Hardening [⏳ PENDING]
+## Phase 12 — Gateway Hardening [✅ COMPLETED]
 
-- Enforce IP/user rate limiting (`express-rate-limit`).
-- Centralize input error sanitization.
+**Goal:** Transform the API Gateway into a resilient, abuse-resistant, and secure edge router with tiered rate limiting, proxy error trapping, request tracing, and liveness/readiness probes.
+
+- **Step 12.1 — Packages & Configuration:** ✅ Done (`express-rate-limit`, `rate-limit-redis`, `ioredis`, `.env.docker`, `.env.example`).
+- **Step 12.2 — Validated Environment Schema:** ✅ Done (`src/config/env.ts` with fail-fast parsing and rate limit bounds).
+- **Step 12.3 — Shared Redis Client:** ✅ Done (`src/config/redis.ts` with exponential backoff and health probe).
+- **Step 12.4 — Request Context & Anti-Spoofing:** ✅ Done (`src/middleware/requestContext.ts` generating/echoing `x-request-id` and stripping client-supplied `x-user-id`).
+- **Step 12.5 — Centralized Error & 404 Handlers:** ✅ Done (`errorHandler.ts` sanitizing stack traces and `notFound.ts` returning JSON 404 with requestId).
+- **Step 12.6 — Service Proxy Factory & Error Trap:** ✅ Done (`createServiceProxy.ts` wrapping `http-proxy-middleware` v4 to catch upstream network drops into clean 502/504 JSON).
+- **Step 12.7 — Tiered Rate Limiters:** ✅ Done (`rateLimiters.ts` with Global 300/min, Auth strict 10/15m, Refresh 30/15m, Standard API 100/min per user, and Download 120/h).
+- **Step 12.8 — Health & Readiness Probes:** ✅ Done (`healthRoutes.ts` with `/health` liveness and `/ready` Redis dependency check).
+- **Step 12.9 — Proxy Routes Refactor:** ✅ Done (`proxyRoutes.ts` routing to all 6 microservices through `createServiceProxy`).
+- **Step 12.10 — Hardened Express Pipeline:** ✅ Done (`src/app.ts` with trust proxy, CORS with exposed headers, Helmet, limiters, JSON limit).
+- **Step 12.11 — Server Hardening & Shutdown:** ✅ Done (`server.ts` with slowloris timeouts and graceful `SIGTERM`/`SIGINT` cleanup).
+- **Step 12.12 — Docker & Compose:** ✅ Done (Multi-stage `node:22-alpine` Dockerfile with non-root user, `docker-compose.yml` with readiness healthcheck and `redis` dependency).
+- **Step 12.13 — Automated E2E Test Suite:** ✅ Done (`scripts/e2e-gateway.mjs` verifying probes, 404, request ID, body limit, offline 502/504 sanitization, standard/auth rate limits, and Redis outage behavior).
+- **Step 12.14 — Documentation & Verification:** ✅ Done (TypeScript typecheck 0 errors, READMEs and tracking documents updated).
 
 ---
 
@@ -409,7 +423,7 @@ flowchart TD
     style P9 fill:#e8ffe8,stroke:#3fae3f
     style P10 fill:#e8ffe8,stroke:#3fae3f
     style P11 fill:#e8ffe8,stroke:#3fae3f
-    style P12 fill:#fff4e0,stroke:#d99a2b
+    style P12 fill:#e8ffe8,stroke:#3fae3f
     style PF fill:#fff4e0,stroke:#d99a2b
     style P13 fill:#fff4e0,stroke:#d99a2b
     style P14 fill:#fff4e0,stroke:#d99a2b

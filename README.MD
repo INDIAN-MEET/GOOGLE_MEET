@@ -119,9 +119,9 @@ Rewrite rule: `^/v1/rooms` → `/v1/rooms` (no-op — path forwarded unchanged)
 
 | Client URL | `gatewayAuth`? | Forwards to (chat-service) |
 |---|---|---|
-| `GET /api/chat/:roomId/messages` | ✅ Yes | `GET /api/v1/chat/:roomId/messages` |
+| `GET /api/v1/chat/:roomId/messages` | ✅ Yes | `GET /api/v1/chat/:roomId/messages` |
 
-Rewrite rule: `^/chat` → `/api/v1/chat`
+Rewrite rule: `^/v1/chat` → `/api/v1/chat` (no-op rewrite to service mount)
 
 ### Recording Service → :4007
 
@@ -178,19 +178,19 @@ Every service verifies JWTs **locally** using the shared `JWT_ACCESS_SECRET`. No
 | auth-service | `/api/auth/...` | No — injected by Gateway rewrite |
 | user-service | `/api/users/...` | No — no version prefix anywhere |
 | room-service | `/api/v1/rooms/...` | **Yes** — must be in the client URL |
-| chat-service | `/api/chat/...` | No — injected by Gateway rewrite |
+| chat-service | `/api/v1/chat/...` | **Yes** — must be in the client URL |
 | recording-service | `/api/v1/recordings/...` | **Yes** — must be in the client URL |
 | notification-service | `/api/v1/notifications/...` | **Yes** — must be in the client URL |
 
-**Why:** `room-service`, `recording-service`, and `notification-service` mount their routes under `/v1` internally. The Gateway's pathRewrite rules forward `/v1/...` directly without stripping or injecting versions, making `/v1` part of the client API surface.
+**Why:** `room-service`, `chat-service`, `recording-service`, and `notification-service` mount their routes under `/v1` internally. The Gateway's pathRewrite rules forward `/v1/...` directly, making `/v1` part of the client API surface.
 
 ### 2. `GET /api/auth/me` returns only `{ userId }`, not a full user object
 
 `auth-service`'s `meController` returns `{ userId: req.userId }` only. For a full profile (displayName, avatarUrl, etc.) use `GET /api/users/me` (user-service).
 
-### 3. `​.env.example` in api-gateway is incomplete
+### 3. `​.env.example` in api-gateway is resolved in Phase 12
 
-`​.env.example` is missing `JWT_ACCESS_SECRET` and `CHAT_SERVICE_URL`, both required by `env.ts`. Use `.env.docker` as the complete variable reference.
+`​.env.example` in `services/api-gateway` now contains all required variables (`REDIS_URL`, `TRUST_PROXY`, `BODY_LIMIT`, etc.).
 
 ### 4. Chat-service `.env.docker` has unused variables
 
@@ -266,7 +266,7 @@ curl -s http://localhost:4000/api/auth/turn-credentials \
   -H "Authorization: Bearer $TOKEN" | jq
 
 # 7. Get chat messages
-curl -s "http://localhost:4000/api/chat/$ROOM_CODE/messages?limit=20" \
+curl -s "http://localhost:4000/api/v1/chat/$ROOM_CODE/messages?limit=20" \
   -H "Authorization: Bearer $TOKEN" | jq
 
 # 8. Send meeting invite email (notification-service)
