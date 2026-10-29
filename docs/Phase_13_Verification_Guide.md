@@ -254,3 +254,4 @@ Run this drill to confirm end-to-end resilience and alerting:
 | **No traces appear in Jaeger** | `OTEL_EXPORTER_OTLP_ENDPOINT` missing or wrong. | Ensure `OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4318` is present in `docker-compose.yml` for all services. |
 | **High cardinality metrics warning** | Raw path parameter passed into metric labels. | Ensure all route metrics in `api-gateway` use `resolveGatewayRoute(req)` instead of raw `req.url`. |
 | **Grafana datasource test fails** | Internal docker networking issue. | Ensure datasource URLs in `datasources.yml` use Docker internal hostnames `http://prometheus:9090` and `http://jaeger:16686` (not `localhost`). |
+
