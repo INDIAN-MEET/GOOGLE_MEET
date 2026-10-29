@@ -15,6 +15,8 @@ import { notFound } from './middleware/notFound.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { FRONTEND_ORIGINS, TRUST_PROXY, BODY_LIMIT } from './config/env.js';
 import logger from './utils/logger.js';
+import { httpMetricsMiddleware, metricsHandler } from './observability/metrics.js';
+import { resolveGatewayRoute } from './observability/gatewayMetrics.js';
 
 const app = express();
 
@@ -33,10 +35,15 @@ app.use(
     logger,
     genReqId: (req) => req.headers['x-request-id'] as string,
     autoLogging: {
-      ignore: (req) => req.url === '/health' || req.url === '/ready',
+      ignore: (req) => req.url === '/health' || req.url === '/ready' || req.url === '/metrics',
     },
   }),
 );
+
+// Observability metrics: measures every request
+app.use(httpMetricsMiddleware({ resolveRoute: resolveGatewayRoute }));
+// Scrapes are never rate limited, so mount BEFORE global limiter
+app.get('/metrics', metricsHandler);
 
 // 4. Security headers. cross-origin lets the frontend load recordings from the gateway.
 app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));

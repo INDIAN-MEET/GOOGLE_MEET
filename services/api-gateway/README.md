@@ -15,7 +15,8 @@ Clients never call backend services directly (except signaling-service, which is
 - **Header Sanitization:** Strips incoming spoofed `x-user-id` headers on public and protected routes before gateway authentication.
 - **Gateway Authentication:** Verifies Bearer JWTs locally (`gatewayAuth`), attaches `req.userId`, and forwards verified `x-user-id` downstream.
 - **Tiered Rate Limiting:** Enforces Redis-backed sliding-window rate limiters with standardized draft-7 `RateLimit` and `Retry-After` headers.
-- **Proxy Error Trapping:** Intercepts low-level upstream network failures (`ECONNREFUSED`, timeouts), returning sanitized 502/504 JSON responses without leaking internal service topology or stack traces.
+- **Proxy Error Trapping:** Intercepts low-level upstream network failures (`ECONNREFUSED`, timeouts), returning sanitized 502/504 JSON responses without leaking internal service topology or stack traces. Increments `gateway_proxy_errors_total{target, status}`.
+- **Observability & Metrics:** Exposes `GET /metrics` (protected by Bearer `METRICS_TOKEN`) mounted BEFORE rate limiters. Tracks duration histograms with low-cardinality prefix routing and increments `gateway_rate_limit_hits_total{limiter}` on 429s.
 - **Liveness & Readiness Probes:** Provides un-logged, un-limited `/health` (process liveness) and `/ready` (Redis connectivity readiness).
 
 ---

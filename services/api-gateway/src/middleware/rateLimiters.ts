@@ -5,6 +5,7 @@ import redis from '../config/redis.js';
 import { RATE_LIMITS } from '../config/env.js';
 import AppError from '../utils/AppError.js';
 import logger from '../utils/logger.js';
+import { rateLimitHitsTotal } from '../observability/gatewayMetrics.js';
 
 /** Body returned for every 429. */
 const TOO_MANY_REQUESTS = {
@@ -32,6 +33,8 @@ const userKey = (req: Request): string => (req.userId ? `user:${req.userId}` : i
 interface LimiterConfig {
   /** Redis key prefix, becomes `rl:<prefix>:`. */
   prefix: string;
+  /** Name reported in the gateway_rate_limit_hits_total metric (defaults to prefix). */
+  limiterName?: string;
   /** Window length in ms. */
   windowMs: number;
   /** Max requests per window. */
@@ -53,6 +56,7 @@ interface LimiterConfig {
  * @returns An Express middleware.
  */
 function buildLimiter(config: LimiterConfig): RequestHandler {
+  const limiterMetricName = config.limiterName ?? config.prefix;
   const options: Partial<Options> = {
     windowMs: config.windowMs,
     limit: config.limit,
@@ -68,6 +72,7 @@ function buildLimiter(config: LimiterConfig): RequestHandler {
         redis.call(args[0], ...args.slice(1)) as Promise<RedisReply>,
     }),
     handler: (req, res, _next, optionsUsed) => {
+      rateLimitHitsTotal.inc({ limiter: limiterMetricName });
       logger.warn(
         {
           tier: config.prefix,
@@ -77,7 +82,12 @@ function buildLimiter(config: LimiterConfig): RequestHandler {
         },
         'Rate limit exceeded',
       );
-      res.status(optionsUsed.statusCode).json(TOO_MANY_REQUESTS);
+      const requestId = req.headers['x-request-id'] ?? null;
+      res.status(optionsUsed.statusCode).json({
+        success: false,
+        error: 'Too many requests. Please try again later.',
+        requestId,
+      });
     },
   };
 
@@ -114,6 +124,7 @@ export const globalLimiter: RequestHandler = buildLimiter({
 export const loginLimiter: RequestHandler = failClosed(
   buildLimiter({
     prefix: 'login',
+    limiterName: 'auth',
     ...RATE_LIMITS.login,
     keyGenerator: ipKey,
     skipSuccessfulRequests: true,
@@ -125,6 +136,7 @@ export const loginLimiter: RequestHandler = failClosed(
 export const signupLimiter: RequestHandler = failClosed(
   buildLimiter({
     prefix: 'signup',
+    limiterName: 'auth',
     ...RATE_LIMITS.signup,
     keyGenerator: ipKey,
     failOpen: false,
