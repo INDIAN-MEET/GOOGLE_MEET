@@ -74,6 +74,9 @@ graph TD
 | notification-service | 4008 | PostgreSQL (`notification_db`) | ✅ Active |
 | mailpit | 1025 / 8025 | In-memory | ✅ Active |
 | coturn | 3478 UDP | — | ✅ Defined in docker-compose |
+| prometheus | 9090 | Time-series volume | ✅ Active |
+| grafana | 3001 | SQLite (`grafana_data`) | ✅ Active |
+| jaeger | 16686 | In-memory / OTLP | ✅ Active |
 
 ---
 
@@ -285,9 +288,12 @@ GOOGLE_MEET/
 ├── docker-compose.yml
 ├── infra/
 │   ├── coturn/turnserver.conf
-│   └── postgres-init/           # SQL init scripts (creates separate DBs)
+│   ├── postgres-init/           # SQL init scripts (creates separate DBs)
+│   ├── observability.env        # Shared metrics token & OpenTelemetry settings
+│   ├── prometheus/              # prometheus.yml, alerts.yml, metrics_token
+│   └── grafana/                 # Provisioning datasources, dashboards, overview JSON
 ├── services/
-│   ├── api-gateway/             # :4000 — reverse proxy + JWT gate
+│   ├── api-gateway/             # :4000 — reverse proxy + JWT gate + rate limits
 │   ├── auth-service/            # :4001 — signup/login/tokens/TURN creds
 │   ├── user-service/            # :4002 — profile CRUD
 │   ├── room-service/            # :4003 — room lifecycle
@@ -297,7 +303,20 @@ GOOGLE_MEET/
 │   ├── recording-service/       # :4007 — PlainTransport capture + BullMQ MP4 transcode
 │   └── notification-service/    # :4008 — BullMQ + Nodemailer email invites & reminders
 ├── shared/
+│   └── observability/           # config, metrics, tracing, logContext (synced to services)
+├── scripts/
+│   ├── sync-observability.ps1   # Syncs shared observability files & checks drift
+│   └── e2e-observability.mjs    # End-to-end observability test suite
 └── test-client/
     ├── index.html
     └── app.js
 ```
+
+---
+
+## Observability (Phase 13)
+
+- **Prometheus UI:** `http://localhost:9090` (Scrapes `/metrics` across all 9 services every 15s with alert rules).
+- **Grafana Dashboard:** `http://localhost:3001` (Pre-provisioned dashboard: *Video Meet — Overview*).
+- **Jaeger UI:** `http://localhost:16686` (Distributed tracing across API Gateway and backend microservices).
+- **Protected `/metrics`:** Every service exposes `GET /metrics` on its port, protected with Bearer `METRICS_TOKEN` (not routed through API Gateway for clients).

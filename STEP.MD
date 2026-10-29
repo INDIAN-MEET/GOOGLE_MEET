@@ -1,7 +1,7 @@
 # Video Meet App — Detailed File-by-File Build Steps & Execution Checklist
 
-> **Current Implementation Status:** Phases 0 through 12 are **✅ COMPLETED**.
-> Phases 13 through 16 and Phase F are **⏳ NEXT / PENDING**.
+> **Current Implementation Status:** Phases 0 through 13 are **✅ COMPLETED**.
+> Phases 14 through 16 and Phase F are **⏳ NEXT / PENDING**.
 
 ---
 
@@ -22,7 +22,7 @@
 | **Phase 10** | **Recording Service**    | ✅ COMPLETED | Port 4007, `recording_db`. SFU captures per-peer RTP with FFmpeg (copy mode), BullMQ worker converts to MP4, REST API, Redis events to signaling, auto stop, recovery. Frontend part in Phase F. |
 | **Phase 11** | **Notification Service** | ✅ COMPLETED | Port 4008, `notification_db`. Nodemailer + Mailpit, BullMQ async email queue for room invites & scheduled reminders, Redis room-events subscriber, cancellation on room-end, Gateway proxy (`/api/v1/notifications/*`). Verified via `e2e-notification.mjs`. |
 | **Phase 12** | **Gateway Hardening**    | ✅ COMPLETED | Port 4000. Express 5 + http-proxy-middleware v4. Tiered Redis rate limiting, proxy error trap (sanitized 502/504), x-request-id tracing, anti-spoofing header cleanup, slowloris timeouts, graceful shutdown, /health & /ready probes. Verified via `e2e-gateway.mjs`. |
-| **Phase 13** | **Observability**        |  ⏳ PENDING  | Prometheus`/metrics`, Grafana dashboards & OpenTelemetry tracing.                                      |
+| **Phase 13** | **Observability**        | ✅ COMPLETED | `/metrics` on all 9 services (prom-client), Prometheus + alert rules, Grafana provisioned dashboard, OpenTelemetry → Jaeger, Pino `trace_id`. Verified via `e2e-observability.mjs`. |
 | **Phase 14** | **CI/CD**                |  ⏳ PENDING  | GitHub Actions automated workflows for linting, testing, and Docker builds.                              |
 | **Phase 15** | **Kubernetes (K8s)**     |  ⏳ PENDING  | K8s deployments, ingress routing, HPA for signaling/SFU, Coturn StatefulSet.                             |
 | **Phase 16** | **Load Testing**         |  ⏳ PENDING  | Artillery load tests & PgBouncer database connection pooling.                                            |
@@ -356,10 +356,23 @@ flowchart TD
 
 ---
 
-## Phase 13 — Observability [⏳ PENDING]
+## Phase 13 — Observability [✅ COMPLETED]
 
-- Expose Prometheus `/metrics` endpoints across services.
-- Setup Grafana dashboards and OpenTelemetry distributed tracing.
+- **Step 13.1 — Package Installation:** ✅ Done (`prom-client`, `@opentelemetry/api`, `@opentelemetry/sdk-node`, `@opentelemetry/auto-instrumentations-node`, `@opentelemetry/exporter-trace-otlp-http` in all 9 services).
+- **Step 13.2 — Fail-Fast Config:** ✅ Done (`shared/observability/config.ts` enforcing `OTEL_SERVICE_NAME` and production `METRICS_TOKEN`).
+- **Step 13.3 — Metrics Module:** ✅ Done (`shared/observability/metrics.ts` with low-cardinality route labels, constant-time token comparison, `/metrics` endpoint).
+- **Step 13.4 — Tracing Bootstrap:** ✅ Done (`shared/observability/tracing.ts` with OTLP/HTTP export to Jaeger, probe filtering, graceful flush).
+- **Step 13.5 — Log Correlation:** ✅ Done (`shared/observability/logContext.ts` traceMixin adding `trace_id` and `span_id` to Pino logs).
+- **Step 13.6 — Automated Sync:** ✅ Done (`scripts/sync-observability.ps1` with drift detection copying shared modules to all 9 services).
+- **Step 13.7 — Express Integration:** ✅ Done (Tracing first import in `server.ts`, timing middleware & `/metrics` in `src/app.ts`, trace mixin in logger, dev `--env-file`).
+- **Step 13.8 — API Gateway Metrics:** ✅ Done (`gatewayMetrics.ts`, fixed prefix resolution, `gateway_proxy_errors_total` on 502/504, `gateway_rate_limit_hits_total` on 429).
+- **Step 13.9 — Signaling Metrics:** ✅ Done (`signalingMetrics.ts`, `signaling_connected_sockets` gauge, `signaling_events_total` counter).
+- **Step 13.10 — SFU Metrics:** ✅ Done (`sfuMetrics.ts`, dynamic gauges for workers, routers, transports, producers, consumers via scrape-time collector).
+- **Step 13.11 — Queue Metrics:** ✅ Done (`queueMetrics.ts` for BullMQ jobs across waiting/active/delayed/failed states, plus `emailMetrics.ts` sent/failed counters).
+- **Step 13.12 — Prometheus Config & Alert Rules:** ✅ Done (`infra/prometheus/prometheus.yml`, `alerts.yml` with 7 production alert rules, `metrics_token`).
+- **Step 13.13 — Grafana Provisioning & Dashboard:** ✅ Done (Prometheus & Jaeger datasources, dashboard provider, `video-meet-overview.json` with 10 monitoring panels).
+- **Step 13.14 — Docker Compose Integration:** ✅ Done (Prometheus, Grafana, Jaeger services, volumes, shared `infra/observability.env`, root `.env`).
+- **Step 13.15 — E2E Test Suite:** ✅ Done (`scripts/e2e-observability.mjs` verifying metrics, auth, Prometheus scrape, Jaeger traces, Grafana API, and service failure recovery).
 
 ---
 
@@ -425,7 +438,7 @@ flowchart TD
     style P11 fill:#e8ffe8,stroke:#3fae3f
     style P12 fill:#e8ffe8,stroke:#3fae3f
     style PF fill:#fff4e0,stroke:#d99a2b
-    style P13 fill:#fff4e0,stroke:#d99a2b
+    style P13 fill:#e8ffe8,stroke:#3fae3f
     style P14 fill:#fff4e0,stroke:#d99a2b
     style P15 fill:#fff4e0,stroke:#d99a2b
     style P16 fill:#fff4e0,stroke:#d99a2b
