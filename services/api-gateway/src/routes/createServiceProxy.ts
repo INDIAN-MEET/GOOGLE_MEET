@@ -79,7 +79,6 @@ export function createServiceProxy(options: ServiceProxyOptions) {
     changeOrigin: true,
     pathFilter,
     pathRewrite,
-    timeout: timeoutMs,
     proxyTimeout: timeoutMs,
     on: {
       proxyReq: fixRequestBody,
