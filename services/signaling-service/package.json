@@ -4,7 +4,7 @@
   "description": "**Port:** 4004 **Database:** none (stateless HTTP/WS layer) — uses **Redis** for live, in-memory presence only **Protocol:** WebSocket (Socket.io), not REST",
   "main": "index.js",
   "scripts": {
-    "dev": "tsx watch server.ts",
+    "dev": "tsx watch --env-file=.env server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
     "test:join": "tsx tests/manual/join-room.client.ts"
