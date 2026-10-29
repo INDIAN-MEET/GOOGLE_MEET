@@ -1,12 +1,16 @@
+// Must be first: OpenTelemetry patches libraries as they load.
+import './src/observability/tracing.js';
+
 import { app } from './src/app.ts';
 import { env } from './src/config/env.ts';
 import { prisma } from './src/config/prisma.ts';
 import { redis } from './src/config/redis.ts';
 import { startMaintenance, stopMaintenance } from './src/maintenance/scheduler.ts';
-import { closeAutoStop, startAutoStopWorker } from './src/queue/autoStop.ts';
+import { autoStopQueue, closeAutoStop, startAutoStopWorker } from './src/queue/autoStop.ts';
 import { startFinalizeWorker, stopFinalizeWorker } from './src/queue/finalizeWorker.ts';
-import { closeQueues } from './src/queue/queues.ts';
+import { closeQueues, finalizeQueue } from './src/queue/queues.ts';
 import { logger } from './src/utils/logger.ts';
+import { registerQueueMetrics } from './src/observability/queueMetrics.js';
 
 /**
  * Boots recording-service.
@@ -28,6 +32,7 @@ async function main(): Promise<void> {
   startFinalizeWorker();
   startAutoStopWorker();
   startMaintenance();
+  registerQueueMetrics([finalizeQueue, autoStopQueue]);
 
   let shuttingDown = false;
 

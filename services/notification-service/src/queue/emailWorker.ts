@@ -6,6 +6,7 @@ import { sendEmail } from "../email/sendEmail.ts";
 import { renderInvite, renderReminder } from "../email/templates.ts";
 import { logger } from "../utils/logger.ts";
 import { EMAIL_QUEUE_NAME, type EmailJobData } from "./queues.ts";
+import { emailJobsTotal, emailTypeLabel } from "../observability/emailMetrics.js";
 
 /**
  * Process one email job.
@@ -72,8 +73,11 @@ export function startEmailWorker(): Worker<EmailJobData> {
     concurrency: env.emailQueueConcurrency,
   });
 
+  worker.on("completed", (job) => emailJobsTotal.inc({ type: emailTypeLabel(job.name), result: "sent" }));
+
   // Called after EVERY failed attempt. Record the error text each time.
   worker.on("failed", async (job, err) => {
+    emailJobsTotal.inc({ type: emailTypeLabel(job?.name), result: "failed" });
     if (!job) return;
     const maxAttempts = job.opts.attempts ?? 1;
     const isFinal = job.attemptsMade >= maxAttempts;
