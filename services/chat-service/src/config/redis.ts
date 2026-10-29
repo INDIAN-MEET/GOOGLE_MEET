@@ -1,6 +1,6 @@
 import { createClient } from 'redis';
-import { REDIS_URL } from './env.ts';
-import logger from '../utils/logger.ts';
+import { REDIS_URL } from './env.js';
+import logger from '../utils/logger.js';
 
 /**
  * Dedicated Redis client for the chat-service subscriber.

@@ -4,7 +4,7 @@
   "description": "**Port:** 4003 **Database:** PostgreSQL (room_db)",
   "main": "index.js",
   "scripts": {
-    "dev": "tsx watch server.ts",
+    "dev": "tsx watch --env-file=.env server.ts",
     "build": "tsc",
     "start": "node dist/server.js"
   },

@@ -1,8 +1,8 @@
 import { Router } from 'express';
-import { authGuard } from '../middleware/authGuard.ts';
-import { validateQuery } from '../middleware/validate.ts';
-import { getMessagesQuerySchema } from '../validation/chatSchemas.ts';
-import getMessages from '../controllers/getMessagesController.ts';
+import { authGuard } from '../middleware/authGuard.js';
+import { validateQuery } from '../middleware/validate.js';
+import { getMessagesQuerySchema } from '../validation/chatSchemas.js';
+import getMessages from '../controllers/getMessagesController.js';
 
 const router = Router();
 
