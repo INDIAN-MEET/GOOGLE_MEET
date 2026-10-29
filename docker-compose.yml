@@ -43,6 +43,9 @@ services:
       - "4000:4000"
     env_file:
       - ./services/api-gateway/.env.docker
+      - ./infra/observability.env
+    environment:
+      OTEL_SERVICE_NAME: api-gateway
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4000/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
       interval: 15s
@@ -64,6 +67,9 @@ services:
       - "4001:4001"
     env_file:
       - ./services/auth-service/.env.docker
+      - ./infra/observability.env
+    environment:
+      OTEL_SERVICE_NAME: auth-service
     depends_on:
       - postgres
       - redis
@@ -76,6 +82,9 @@ services:
       - "4002:4002"
     env_file:
       - ./services/user-service/.env.docker
+      - ./infra/observability.env
+    environment:
+      OTEL_SERVICE_NAME: user-service
     depends_on:
       - postgres
       - redis
@@ -88,6 +97,9 @@ services:
       - "4003:4003"
     env_file:
       - ./services/room-service/.env.docker
+      - ./infra/observability.env
+    environment:
+      OTEL_SERVICE_NAME: room-service
     depends_on:
       - postgres
       - redis
@@ -101,10 +113,12 @@ services:
       - "4004:4004"
     env_file:
       - ./services/signaling-service/.env.docker
+      - ./infra/observability.env
     environment:
       - SFU_SERVICE_URL=http://sfu-service:4006
       - INTERNAL_SECRET=${INTERNAL_SECRET}
       - DEFAULT_ROOM_MODE=sfu          # "sfu" (default) or "mesh" (fallback)
+      - OTEL_SERVICE_NAME=signaling-service
     depends_on:
       - redis
       - room-service
@@ -117,6 +131,9 @@ services:
       - "4005:4005"
     env_file:
       - ./services/chat-service/.env.docker
+      - ./infra/observability.env
+    environment:
+      OTEL_SERVICE_NAME: chat-service
     depends_on:
       - mongo
       - redis
@@ -130,6 +147,8 @@ services:
       - "4006:4006"                        # dev only — remove in production
       - "40000-40100:40000-40100/udp"      # media (must match RTC_MIN_PORT/RTC_MAX_PORT below)
       - "40000-40100:40000-40100/tcp"
+    env_file:
+      - ./infra/observability.env
     environment:
       - PORT=4006
       - NODE_ENV=development
@@ -145,6 +164,7 @@ services:
       - RECORDING_SERVICE_URL=http://recording-service:4007
       - RECORDING_RTP_MIN_PORT=50000
       - RECORDING_RTP_MAX_PORT=50200
+      - OTEL_SERVICE_NAME=sfu-service
     volumes:
       - recordings_data:/recordings
 
@@ -157,10 +177,12 @@ services:
       - "4007:4007"          # dev only
     env_file:
       - ./services/recording-service/.env.docker
+      - ./infra/observability.env
     environment:
       - INTERNAL_SECRET=${INTERNAL_SECRET}
       - SFU_SERVICE_URL=http://sfu-service:4006
       - FFMPEG_PATH=${FFMPEG_PATH:-ffmpeg}
+      - OTEL_SERVICE_NAME=recording-service
     volumes:
       - recordings_data:/recordings
     healthcheck:
@@ -204,6 +226,9 @@ services:
       - "4008:4008"
     env_file:
       - ./services/notification-service/.env.docker
+      - ./infra/observability.env
+    environment:
+      OTEL_SERVICE_NAME: notification-service
     depends_on:
       - postgres
       - redis
@@ -226,7 +251,65 @@ services:
     volumes:
       - ./infra/coturn/turnserver.conf:/etc/coturn/turnserver.conf
 
+  # ==========================================================================
+  # OBSERVABILITY — Prometheus, Grafana, Jaeger (Phase 13)
+  # ==========================================================================
+  prometheus:
+    image: prom/prometheus:v3.5.0
+    container_name: prometheus
+    restart: unless-stopped
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.retention.time=15d   # keep 15 days, then delete old data
+    volumes:
+      - ./infra/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./infra/prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - ./infra/prometheus/metrics_token:/etc/prometheus/metrics_token:ro
+      - prometheus_data:/prometheus
+    ports:
+      - "127.0.0.1:9090:9090"   # localhost only: Prometheus has no login
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:9090/-/healthy"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  grafana:
+    image: grafana/grafana:12.0.2
+    container_name: grafana
+    restart: unless-stopped
+    depends_on:
+      prometheus:
+        condition: service_healthy
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?set GRAFANA_ADMIN_PASSWORD in .env}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+    volumes:
+      - ./infra/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./infra/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana_data:/var/lib/grafana
+    ports:
+      - "127.0.0.1:3001:3000"   # 3000 is used by test-client
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:3000/api/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.62.0
+    container_name: jaeger
+    restart: unless-stopped
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+    ports:
+      - "127.0.0.1:16686:16686"   # UI. OTLP port 4318 stays inside the Docker network.
+
 volumes:
   postgres_data:
   mongo_data:
   recordings_data:
+  prometheus_data:
+  grafana_data:

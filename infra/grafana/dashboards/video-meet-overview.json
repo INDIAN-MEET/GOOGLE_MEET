@@ -1,0 +1,85 @@
+{
+  "uid": "video-meet-overview",
+  "title": "Video Meet — Overview",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "15s",
+  "time": { "from": "now-1h", "to": "now" },
+  "tags": ["video-meet"],
+  "panels": [
+    {
+      "id": 1, "type": "stat", "title": "Services UP",
+      "gridPos": { "x": 0, "y": 0, "w": 4, "h": 5 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [{ "refId": "A", "expr": "sum(up{job=\"video-meet\"})" }]
+    },
+    {
+      "id": 2, "type": "timeseries", "title": "Requests per second (by service)",
+      "gridPos": { "x": 4, "y": 0, "w": 10, "h": 5 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] },
+      "targets": [{ "refId": "A", "legendFormat": "{{service}}", "expr": "sum by (service) (rate(http_request_duration_seconds_count[5m]))" }]
+    },
+    {
+      "id": 3, "type": "timeseries", "title": "5xx errors per second (by service)",
+      "gridPos": { "x": 14, "y": 0, "w": 10, "h": 5 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] },
+      "targets": [{ "refId": "A", "legendFormat": "{{service}}", "expr": "sum by (service) (rate(http_request_duration_seconds_count{status_code=~\"5..\"}[5m]))" }]
+    },
+    {
+      "id": 4, "type": "timeseries", "title": "p95 latency (by service)",
+      "gridPos": { "x": 0, "y": 5, "w": 12, "h": 7 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] },
+      "targets": [{ "refId": "A", "legendFormat": "{{service}}", "expr": "histogram_quantile(0.95, sum by (service, le) (rate(http_request_duration_seconds_bucket[5m])))" }]
+    },
+    {
+      "id": 5, "type": "timeseries", "title": "Gateway: upstream errors and rate-limit hits",
+      "gridPos": { "x": 12, "y": 5, "w": 12, "h": 7 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        { "refId": "A", "legendFormat": "502/504 {{target}}", "expr": "sum by (target) (rate(gateway_proxy_errors_total[5m]))" },
+        { "refId": "B", "legendFormat": "429 {{limiter}}", "expr": "sum by (limiter) (rate(gateway_rate_limit_hits_total[5m]))" }
+      ]
+    },
+    {
+      "id": 6, "type": "timeseries", "title": "Signaling: connected sockets",
+      "gridPos": { "x": 0, "y": 12, "w": 8, "h": 6 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [{ "refId": "A", "legendFormat": "sockets", "expr": "signaling_connected_sockets" }]
+    },
+    {
+      "id": 7, "type": "timeseries", "title": "SFU: transports / producers / consumers",
+      "gridPos": { "x": 8, "y": 12, "w": 8, "h": 6 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        { "refId": "A", "legendFormat": "transports", "expr": "sfu_transports" },
+        { "refId": "B", "legendFormat": "producers", "expr": "sfu_producers" },
+        { "refId": "C", "legendFormat": "consumers", "expr": "sfu_consumers" },
+        { "refId": "D", "legendFormat": "rooms", "expr": "sfu_routers" }
+      ]
+    },
+    {
+      "id": 8, "type": "timeseries", "title": "BullMQ jobs (by queue and state)",
+      "gridPos": { "x": 16, "y": 12, "w": 8, "h": 6 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [{ "refId": "A", "legendFormat": "{{queue}} {{state}}", "expr": "sum by (queue, state) (bullmq_jobs)" }]
+    },
+    {
+      "id": 9, "type": "timeseries", "title": "Event loop lag p99 (by service)",
+      "gridPos": { "x": 0, "y": 18, "w": 12, "h": 6 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] },
+      "targets": [{ "refId": "A", "legendFormat": "{{service}}", "expr": "nodejs_eventloop_lag_p99_seconds" }]
+    },
+    {
+      "id": 10, "type": "timeseries", "title": "Memory (RSS) by service",
+      "gridPos": { "x": 12, "y": 18, "w": 12, "h": 6 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "bytes" }, "overrides": [] },
+      "targets": [{ "refId": "A", "legendFormat": "{{service}}", "expr": "process_resident_memory_bytes" }]
+    }
+  ]
+}
+

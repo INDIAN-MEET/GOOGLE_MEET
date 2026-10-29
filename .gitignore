@@ -5,3 +5,5 @@ dist/
 .git-auto-commit/
 .env.docker
 recordings
+infra/observability.env
+infra/prometheus/metrics_token
