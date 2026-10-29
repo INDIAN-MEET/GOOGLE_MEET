@@ -1,0 +1,58 @@
+# infra/prometheus/alerts.yml
+groups:
+  - name: video-meet
+    rules:
+      - alert: ServiceDown
+        expr: up{job="video-meet"} == 0
+        for: 1m
+        labels: { severity: critical }
+        annotations:
+          summary: "{{ $labels.service }} is down"
+          description: "Prometheus could not scrape {{ $labels.service }} for 1 minute."
+
+      - alert: High5xxRate
+        expr: |
+          sum by (service) (rate(http_request_duration_seconds_count{status_code=~"5.."}[5m]))
+            / sum by (service) (rate(http_request_duration_seconds_count[5m])) > 0.05
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          summary: "{{ $labels.service }} returns more than 5% 5xx"
+
+      - alert: HighLatencyP95
+        expr: |
+          histogram_quantile(0.95,
+            sum by (service, le) (rate(http_request_duration_seconds_bucket[5m]))) > 1
+        for: 10m
+        labels: { severity: warning }
+        annotations:
+          summary: "{{ $labels.service }} p95 latency is above 1 second"
+
+      - alert: GatewayUpstreamErrors
+        expr: sum by (target) (increase(gateway_proxy_errors_total[5m])) > 5
+        for: 2m
+        labels: { severity: critical }
+        annotations:
+          summary: "Gateway cannot reach {{ $labels.target }} (502/504)"
+
+      - alert: QueueBacklog
+        expr: bullmq_jobs{state="waiting"} > 100
+        for: 10m
+        labels: { severity: warning }
+        annotations:
+          summary: "Queue {{ $labels.queue }} has more than 100 waiting jobs"
+
+      - alert: QueueFailedJobs
+        expr: bullmq_jobs{state="failed"} > 10
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          summary: "Queue {{ $labels.queue }} has more than 10 failed jobs"
+
+      - alert: EventLoopLagHigh
+        expr: nodejs_eventloop_lag_p99_seconds > 0.2
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          summary: "{{ $labels.service }} event loop is blocked (p99 above 200 ms)"
+

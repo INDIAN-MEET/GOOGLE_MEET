@@ -7,6 +7,7 @@ import { errorHandler, notFoundHandler } from "./middleware/errorHandler.ts";
 import { notificationRoutes } from "./routes/notificationRoutes.ts";
 import { logger } from "./utils/logger.ts";
 import { asyncHandler } from "./utils/asyncHandler.ts";
+import { httpMetricsMiddleware, metricsHandler } from "./observability/metrics.js";
 
 /**
  * Build the Express application (no listening here, so it can be tested).
@@ -20,6 +21,8 @@ export function createApp() {
   app.use(cors());
   app.use(express.json({ limit: "100kb" })); // invites are small
   app.use(pinoHttp({ logger }));
+  app.use(httpMetricsMiddleware());
+  app.get("/metrics", metricsHandler);
 
   app.get("/health", health);
   app.get("/ready", asyncHandler(async (req, res) => ready(req, res)));

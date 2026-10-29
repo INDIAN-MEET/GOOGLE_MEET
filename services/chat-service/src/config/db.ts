@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
-import { MONGO_URI } from './env.ts';
-import logger from '../utils/logger.ts';
+import { MONGO_URI } from './env.js';
+import logger from '../utils/logger.js';
 
 /**  
  * Connect to MongoDB

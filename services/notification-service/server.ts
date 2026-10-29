@@ -1,3 +1,6 @@
+// Must be first: OpenTelemetry patches libraries as they load.
+import "./src/observability/tracing.js";
+
 import { createApp } from "./src/app.ts";
 import { env } from "./src/config/env.ts";
 import { prisma } from "./src/config/prisma.ts";
@@ -6,6 +9,7 @@ import { emailQueue } from "./src/queue/queues.ts";
 import { startEmailWorker } from "./src/queue/emailWorker.ts";
 import { startRoomEventsSubscriber } from "./src/subscribers/roomEventsSubscriber.ts";
 import { logger } from "./src/utils/logger.ts";
+import { registerQueueMetrics } from "./src/observability/queueMetrics.js";
 
 /**
  * Boot sequence:
@@ -20,6 +24,7 @@ async function main(): Promise<void> {
 
   const worker = startEmailWorker();
   const subscriber = startRoomEventsSubscriber();
+  registerQueueMetrics([emailQueue]);
 
   /**
    * Graceful shutdown: stop accepting work, let running jobs finish, close

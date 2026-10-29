@@ -3,6 +3,7 @@ import sfuRoutes from './routes/sfuRoutes.ts';
 import { errorHandler } from './middleware/errorHandler.ts';
 import { authGuard } from './middleware/authGuard.ts';
 import { devCors } from './middleware/devCors.ts';
+import { httpMetricsMiddleware, metricsHandler } from './observability/metrics.js';
 
 /**
  * app.ts
@@ -24,6 +25,8 @@ const app = express();
 
 app.use(express.json());                                  // STEP 1
 app.use(devCors);                                         // STEP 2
+app.use(httpMetricsMiddleware());
+app.get('/metrics', metricsHandler);
 
 app.get('/health', (_req, res) => {                       // STEP 3
   res.status(200).json({ status: 'ok' });

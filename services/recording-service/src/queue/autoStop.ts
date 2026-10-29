@@ -4,7 +4,7 @@ import { connection } from './queues.ts';
 import { requestStop } from '../services/recordingLifecycle.ts';
 import { logger } from '../utils/logger.ts';
 
-const autoStopQueue = new Queue('recording-autostop', {
+export const autoStopQueue = new Queue('recording-autostop', {
   connection,
   defaultJobOptions: { removeOnComplete: 100, removeOnFail: 100 },
 });

@@ -2,6 +2,7 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import type { Socket } from 'node:net';
 import { createProxyMiddleware, fixRequestBody } from 'http-proxy-middleware';
 import logger from '../utils/logger.js';
+import { proxyErrorsTotal } from '../observability/gatewayMetrics.js';
 
 /** Error codes meaning "the service cannot be reached" (502). */
 const UNREACHABLE_CODES = new Set([
@@ -117,6 +118,8 @@ export function createServiceProxy(options: ServiceProxyOptions) {
         }
 
         const failure = classifyProxyError(err as NodeJS.ErrnoException);
+
+        proxyErrorsTotal.inc({ target: name, status: String(failure.status) });
 
         res.writeHead(failure.status, {
           'Content-Type': 'application/json',

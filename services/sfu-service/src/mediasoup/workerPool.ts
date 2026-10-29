@@ -27,3 +27,7 @@ export function getNextWorker(): mediasoup.types.Worker {
   nextIndex = (nextIndex + 1) % workers.length;
   return worker;
 }
+
+export function getWorkerCount(): number {
+  return workers.length;
+}

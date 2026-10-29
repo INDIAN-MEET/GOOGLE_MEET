@@ -53,6 +53,20 @@ export function getPeerCount(roomId: string): number {
     return peerCount ?? 0
 }
 
+export function getPeerStats(): { transports: number; producers: number; consumers: number } {
+  let transports = 0;
+  let producers = 0;
+  let consumers = 0;
+  for (const roomPeers of rooms.values()) {
+    for (const peer of roomPeers.values()) {
+      transports += peer.transports.size;
+      producers += peer.producers.size;
+      consumers += peer.consumers.size;
+    }
+  }
+  return { transports, producers, consumers };
+}
+
 /**
  * listPeerIds(roomId)
  *

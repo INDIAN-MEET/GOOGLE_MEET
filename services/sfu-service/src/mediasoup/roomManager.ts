@@ -9,6 +9,10 @@ import AppError from '../utils/AppError.ts';
 
 const routers = new Map<string, Promise<mediasoup.types.Router>>();
 
+export function getRouterCount(): number {
+  return routers.size;
+}
+
 export function getOrCreateRouter(
     roomId: string,
 ): Promise<mediasoup.types.Router> {

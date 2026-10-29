@@ -1,3 +1,6 @@
+// Must be first: OpenTelemetry patches libraries as they load.
+import './src/observability/tracing.js';
+
 import http from 'node:http';
 import app from './src/app.js';
 import redis from './src/config/redis.js';
