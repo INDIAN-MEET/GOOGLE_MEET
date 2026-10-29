@@ -16,3 +16,4 @@ export function traceMixin(): Record<string, string> {
   const { traceId, spanId } = span.spanContext();
   return { trace_id: traceId, span_id: spanId };
 }
+
