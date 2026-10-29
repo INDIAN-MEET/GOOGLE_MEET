@@ -146,7 +146,7 @@ async function gatewayMetricsText() {
  * @returns {Promise<{status: number, json: any}>} status and parsed JSON (null if not JSON)
  * @throws {Error} on network failure
  */
-async function gw(path, { method = 'GET', token, body } = {}) {
+async function gw(path, { method = 'GET', token, body, timeoutMs = 35000 } = {}) {
   const res = await fetch(`${GATEWAY}${path}`, {
     method,
     headers: {
@@ -154,7 +154,7 @@ async function gw(path, { method = 'GET', token, body } = {}) {
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
     body: body ? JSON.stringify(body) : undefined,
-    signal: AbortSignal.timeout(15000),
+    signal: AbortSignal.timeout(timeoutMs),
   });
   let json = null;
   try {
