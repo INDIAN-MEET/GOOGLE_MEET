@@ -397,7 +397,7 @@ flowchart TD
 ## Phase F — Frontend (React App) [⏳ PENDING]
 
 **Goal:** Full interactive React frontend with mediasoup-client video grid, auth flows, chat panel, room controls, and audio/video settings.
-**Guide:** `FRONTEND/Phase_9_sfu_frontend_guide.md`
+**Guide:** [`docs/Phase_F_frontend_guide.md`](file:///c:/Users/swaru/OneDrive/Desktop/PROJECT/GOOGLE_MEET/docs/Phase_F_frontend_guide.md)
 
 ---
 
