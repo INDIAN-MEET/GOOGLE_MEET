@@ -25,7 +25,7 @@ export const SFU_EVENTS = {
   producerClosed: 'producer-closed',
 } as const;
 
-export type Source = 'mic' | 'cam' | 'screen';
+export type Source = 'mic' | 'camera' | 'screen';
 export interface RemoteProducerInfo {
   producerId: string;
   socketId?: string;
@@ -100,7 +100,7 @@ export class SfuClient {
     // STEP 4b — send transport only: 'produce' → server creates producer, returns its id
     if (direction === 'send') {
       transport.on('produce', ({ kind, rtpParameters, appData }, callback, errback) => {
-        const source = (appData as { source?: Source })?.source ?? 'cam';
+        const source = (appData as { source?: Source })?.source ?? (kind === 'audio' ? 'mic' : 'camera');
         request<{ producerId?: string; id?: string }>(this.socket, SFU_EVENTS.produce, {
           transportId: transport.id,
           kind,
@@ -120,11 +120,12 @@ export class SfuClient {
     return transport;
   }
 
-  // STEP 5 — publish one local track (mic / cam / screen)
+  // STEP 5 — publish one local track (mic / camera / screen)
   async produce(track: MediaStreamTrack, source: Source): Promise<void> {
     if (!this.sendTransport) throw new Error('SFU not initialised');
     const producer = await this.sendTransport.produce({
       track,
+      stopTracks: false,
       appData: { source },
     });
     this.producers.set(source, producer);
@@ -141,7 +142,7 @@ export class SfuClient {
 
   // STEP 7 — camera flip: swap the track without renegotiating
   async replaceVideoTrack(track: MediaStreamTrack): Promise<void> {
-    await this.producers.get('cam')?.replaceTrack({ track });
+    await this.producers.get('camera')?.replaceTrack({ track });
   }
 
   // STEP 8 — who is already publishing in this room? (when we join late)
@@ -157,7 +158,7 @@ export class SfuClient {
       socketId: item.peerId || item.socketId,
       peerId: item.peerId || item.socketId,
       userId: item.userId,
-      source: item.source || (item.kind === 'audio' ? 'mic' : 'cam'),
+      source: item.source || (item.kind === 'audio' ? 'mic' : 'camera'),
       kind: item.kind,
     }));
   }

@@ -67,11 +67,17 @@ export default function RoomPage() {
   // STEP 5 — click handlers (sessions are created ONLY here)
   async function onJoin() {
     if (!userId) return;
+    let stream = media.stream;
+    const hasLiveTracks = stream?.getTracks().some((t) => t.readyState === 'live');
+    if (!hasLiveTracks) {
+      const fresh = await media.start();
+      if (fresh) stream = fresh;
+    }
     const s = new CallSession(code, userId);
     sessionRef.current = s;
     setSession(s);
     try {
-      await s.join(media.stream);
+      await s.join(stream);
     } catch {
       /* message already in the store */
     }

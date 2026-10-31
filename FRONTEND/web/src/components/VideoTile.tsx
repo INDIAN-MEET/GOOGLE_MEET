@@ -23,12 +23,14 @@ export function VideoTile({ stream, name, muted = false, mirror = false, videoOf
   }, [stream]);
 
   // STEP 2 — show a letter avatar when there is no live video
-  const noVideo = videoOff || !stream || stream.getVideoTracks().length === 0;
+  const videoTracks = stream ? stream.getVideoTracks() : [];
+  const hasLiveVideo = videoTracks.some((t) => t.readyState === 'live' && t.enabled);
+  const noVideo = videoOff || !hasLiveVideo;
 
   return (
     <div className={`tile ${mirror ? 'mirror' : ''}`}>
       {/* playsInline = required for iOS; autoPlay works because joining was a user click */}
-      <video ref={ref} autoPlay playsInline muted={muted} />
+      <video ref={ref} autoPlay playsInline muted={muted} style={{ display: noVideo ? 'none' : 'block' }} />
       {noVideo && <div className="placeholder">{(name ?? '?').slice(0, 1).toUpperCase()}</div>}
       {name && <span className="name">{name}</span>}
     </div>

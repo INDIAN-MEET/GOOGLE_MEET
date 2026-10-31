@@ -37,6 +37,14 @@ export function useLocalMedia() {
 
   // STEP 3 — start camera + mic
   const start = useCallback(async () => {
+    // If we already have an active stream with live tracks, keep using it
+    if (
+      streamRef.current &&
+      streamRef.current.getTracks().some((t) => t.readyState === 'live')
+    ) {
+      return streamRef.current;
+    }
+
     const myId = ++requestId.current;
     try {
       const s = await navigator.mediaDevices.getUserMedia({
@@ -49,8 +57,20 @@ export function useLocalMedia() {
       setStream(s); setError(null); setMicOn(true); setCamOn(true); setFacing('user');
       return s;
     } catch (e) {
-      if (myId === requestId.current) setError(explain(e));
-      return null;
+      // Fallback: machine might not have a camera or camera is blocked; try audio only
+      try {
+        const audioOnly = await navigator.mediaDevices.getUserMedia({
+          audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+        });
+        if (myId !== requestId.current) { audioOnly.getTracks().forEach((t) => t.stop()); return null; }
+        streamRef.current?.getTracks().forEach((t) => t.stop());
+        streamRef.current = audioOnly;
+        setStream(audioOnly); setError(null); setMicOn(true); setCamOn(false);
+        return audioOnly;
+      } catch {
+        if (myId === requestId.current) setError(explain(e));
+        return null;
+      }
     }
   }, []);
 

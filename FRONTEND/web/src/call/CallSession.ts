@@ -141,10 +141,24 @@ export class CallSession {
     const creds = await getTurnCredentials().catch(() => null);
     await this.sfu.init(this.roomCode, buildIceServers(creds));
 
-    const audio = this.localStream?.getAudioTracks()[0];
-    const video = this.localStream?.getVideoTracks()[0];
-    if (audio) await this.sfu.produce(audio, 'mic');
-    if (video) await this.sfu.produce(video, 'cam');
+    const audio = this.localStream?.getAudioTracks().find((t) => t.readyState === 'live');
+    const video = this.localStream?.getVideoTracks().find((t) => t.readyState === 'live');
+
+    if (audio) {
+      try {
+        await this.sfu.produce(audio, 'mic');
+      } catch (err) {
+        console.warn('Failed to produce audio track:', err);
+      }
+    }
+
+    if (video) {
+      try {
+        await this.sfu.produce(video, 'camera');
+      } catch (err) {
+        console.warn('Failed to produce video track:', err);
+      }
+    }
 
     const existing = await this.sfu.getProducers();
     await Promise.all(existing.map((p) => this.consumeOne(p)));
