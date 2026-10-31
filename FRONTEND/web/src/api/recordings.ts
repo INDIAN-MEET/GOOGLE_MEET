@@ -7,8 +7,12 @@ import type { ApiEnvelope, Recording } from '../types/api';
 
 // STEP 1 — start / stop
 export async function startRecording(roomCode: string): Promise<Recording> {
-  const res = await api.post<ApiEnvelope<Recording>>('/v1/recordings/start', { roomCode });
-  return res.data.data;
+  const res = await api.post<ApiEnvelope<any>>('/v1/recordings/start', { roomCode });
+  const d = res.data.data;
+  return {
+    ...d,
+    id: d.id || d.recordingId,
+  };
 }
 export async function stopRecording(recordingId: string): Promise<void> {
   await api.post(`/v1/recordings/${encodeURIComponent(recordingId)}/stop`);

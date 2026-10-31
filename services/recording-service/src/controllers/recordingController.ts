@@ -72,13 +72,14 @@ export async function startRecording(req: Request, res: Response): Promise<void>
   }
 
   // STEP 8
-  res.status(201).json({ success: true, data: { recordingId, status: 'RECORDING' } });
+  res.status(201).json({ success: true, data: { id: recordingId, recordingId, status: 'RECORDING' } });
 }
 
 /**
  * POST /v1/recordings/:id/stop : stops a recording (owner only).
+ * Supports both recordingId (UUID) and roomCode as the identifier.
  *
- * STEP 1: Load the recording. 404 if missing, 403 if the caller is not the owner.
+ * STEP 1: Load the recording by UUID or active roomCode. 404 if missing, 403 if caller is not owner.
  * STEP 2: requestStop() does the atomic RECORDING to STOPPING change and calls the SFU.
  *         "not-active" means it was not RECORDING, so 409.
  * STEP 3: Cancel the auto-stop job and respond 202. The result arrives by webhook.
@@ -91,12 +92,25 @@ export async function startRecording(req: Request, res: Response): Promise<void>
 export async function stopRecording(req: Request, res: Response): Promise<void> {
   const id = String(req.params.id);
 
-  const recording = await prisma.recording.findUnique({ where: { id } });
+  // Try finding by UUID primary key
+  let recording = await prisma.recording.findUnique({ where: { id } }).catch(() => null);
+
+  // If not found by UUID, try finding the currently active recording by roomCode
+  if (!recording) {
+    recording = await prisma.recording.findFirst({
+      where: {
+        roomCode: id,
+        status: { in: ['RECORDING', 'STARTING'] },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
   if (!recording) throw new AppError('Recording not found', 404);
   if (recording.startedBy !== req.userId) throw new AppError('Forbidden', 403);
 
-  if ((await requestStop(id, 'user')) === 'not-active') throw new AppError('Recording is not active', 409);
+  if ((await requestStop(recording.id, 'user')) === 'not-active') throw new AppError('Recording is not active', 409);
 
-  await cancelAutoStop(id);
-  res.status(202).json({ success: true, data: { status: 'STOPPING' } });
+  await cancelAutoStop(recording.id);
+  res.status(202).json({ success: true, data: { status: 'STOPPING', recordingId: recording.id } });
 }

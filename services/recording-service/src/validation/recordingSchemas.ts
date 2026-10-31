@@ -5,9 +5,9 @@ export const startRecordingSchema = Joi.object({
   roomCode: Joi.string().trim().max(64).required(),
 });
 
-/** :id in the URL must be a UUID */
+/** :id in the URL must be a UUID or a roomCode */
 export const recordingIdParamSchema = Joi.object({
-  id: Joi.string().guid().required(),
+  id: Joi.string().trim().max(64).required(),
 });
 
 /** Webhook body from the SFU (section 4.4 of the guide) */

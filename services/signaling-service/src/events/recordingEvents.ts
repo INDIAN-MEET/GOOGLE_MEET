@@ -4,6 +4,7 @@ import { REDIS_URL } from '../config/env.js';
 import logger from '../utils/logger.js';
 
 const CHANNEL = 'recording-events';
+const ROOM_CHANNEL = 'room-events';
 const DEDUPE_TTL_MS = 60_000;
 const ROOM_CODE_RE = /^[A-Za-z0-9_-]{3,64}$/;
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -75,13 +76,20 @@ export function parseRecordingEvent(raw: string): ClientRecordingEvent | null {
  * @returns A handler `(channel, raw) => void` that never throws.
  */
 function createMessageHandler(io: Server): (channel: string, raw: string) => void {
-  /**
-   * Handles one Redis message.
-   *
-   * @param _channel - Channel name (always "recording-events").
-   * @param raw - JSON text of the event.
-   */
-  return (_channel: string, raw: string): void => {
+  return (channel: string, raw: string): void => {
+    if (channel === ROOM_CHANNEL) {
+      try {
+        const data = JSON.parse(raw);
+        if (data.type === 'room-ended' && data.roomCode) {
+          io.to(data.roomCode).emit('room-ended', { roomCode: data.roomCode });
+          logger.info({ roomCode: data.roomCode }, 'Forwarded room-ended event to sockets');
+        }
+      } catch (err) {
+        logger.warn({ err }, 'Failed to parse room event');
+      }
+      return;
+    }
+
     const event = parseRecordingEvent(raw);
     if (!event) {
       logger.warn('Ignored invalid recording event');
@@ -124,7 +132,7 @@ export function initRecordingEvents(io: Server): Redis {
 
   sub.on('error', onError);
   sub.on('ready', onReady);
-  sub.subscribe(CHANNEL).catch(onError);
+  sub.subscribe(CHANNEL, ROOM_CHANNEL).catch(onError);
   sub.on('message', createMessageHandler(io));
   return sub;
 }

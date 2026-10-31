@@ -61,7 +61,8 @@ export default function RoomPage() {
   // STEP 4 — host detection
   const isHost =
     !!details &&
-    (details.room.hostId === userId ||
+    (details.room.hostUserId === userId ||
+      details.room.hostId === userId ||
       !!details.participants?.some((p) => p.userId === userId && p.role === 'host'));
 
   // STEP 5 — click handlers (sessions are created ONLY here)

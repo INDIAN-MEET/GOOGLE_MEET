@@ -68,10 +68,17 @@ export function RecordingPanel({ roomCode, isHost, onClose }: Props) {
   const onStart = () =>
     run(async () => {
       const r = await startRecording(roomCode);
-      useCallStore.getState().setRecording('recording', r.id);
+      const recId = r.id || (r as any).recordingId;
+      useCallStore.getState().setRecording('recording', recId);
     });
 
-  const onStop = () => run(() => stopRecording(roomCode));
+  const onStop = () =>
+    run(async () => {
+      const active = items.find((r) => r.status === 'RECORDING' || r.status === 'STARTING');
+      const targetId = rec.recordingId || active?.id || roomCode;
+      await stopRecording(targetId);
+      useCallStore.getState().setRecording('processing', targetId);
+    });
 
   // STEP 6 — fetch the file as a Blob (the Authorization header can't be sent by <video src>)
   async function fetchBlobUrl(id: string) {

@@ -108,4 +108,11 @@ export function registerSfuHandlers(socket: Socket): void {
 
     handle(socket, 'resume-consumer', (roomCode, { consumerId }) =>
         sfu.resumeConsumer(roomCode, socket.id, consumerId));
+
+    handle(socket, 'close-producer', async (roomCode, { producerId }) => {
+        if (producerId) {
+            socket.to(roomCode).emit('producer-closed', { producerId });
+        }
+        return { success: true };
+    });
 }
