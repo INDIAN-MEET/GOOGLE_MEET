@@ -61,3 +61,4 @@ Internal mount: `app.use('/v1/recordings', recordingRoutes)`
 | `METRICS_TOKEN` | `secret` | ✅ | Bearer token required for `/metrics` |
 | `OTEL_ENABLED` | `true` | ❌ (default `true`) | Enables OpenTelemetry tracing |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | `http://jaeger:4318` | ❌ | Jaeger OTLP/HTTP endpoint |
+
