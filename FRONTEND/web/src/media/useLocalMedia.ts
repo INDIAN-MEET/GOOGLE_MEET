@@ -89,3 +89,4 @@ export function useLocalMedia() {
 
   return { stream, error, micOn, camOn, facing, start, stop, toggleMic, toggleCam, flipCamera };
 }
+

@@ -82,3 +82,4 @@ export default function AuthPage({ mode }: { mode: 'login' | 'signup' }) {
     </main>
   );
 }
+

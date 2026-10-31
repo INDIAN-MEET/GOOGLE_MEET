@@ -52,3 +52,4 @@ export function PreJoin({ media, roomTitle, joining, error, onJoin }: Props) {
     </main>
   );
 }
+

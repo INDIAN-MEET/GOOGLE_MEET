@@ -162,3 +162,4 @@ export function RecordingPanel({ roomCode, isHost, onClose }: Props) {
     </aside>
   );
 }
+

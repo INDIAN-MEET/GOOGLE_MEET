@@ -16,3 +16,4 @@ export async function updateProfile(patch: Partial<Profile>): Promise<Profile> {
   const res = await api.patch<ApiEnvelope<Profile>>('/users/me', patch);
   return res.data.data;
 }
+

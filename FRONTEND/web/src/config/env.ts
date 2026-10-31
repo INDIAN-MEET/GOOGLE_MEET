@@ -21,3 +21,4 @@ export const env = Object.freeze({
   sfuUrl: required('VITE_SFU_URL'),             // SFU :4006 (or = signaling)
   turnUrl: required('VITE_TURN_URL'),           // turn:host:3478
 });
+

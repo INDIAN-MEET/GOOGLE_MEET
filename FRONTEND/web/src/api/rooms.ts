@@ -25,3 +25,4 @@ export async function getRoom(code: string): Promise<RoomDetails> {
 export const joinRoom = (code: string) => api.post(`/v1/rooms/${encodeURIComponent(code)}/join`);
 export const leaveRoom = (code: string) => api.post(`/v1/rooms/${encodeURIComponent(code)}/leave`);
 export const endRoom = (code: string) => api.post(`/v1/rooms/${encodeURIComponent(code)}/end`); // host only
+

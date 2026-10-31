@@ -35,3 +35,4 @@ export async function downloadRecording(id: string): Promise<Blob> {
   });
   return res.data;
 }
+

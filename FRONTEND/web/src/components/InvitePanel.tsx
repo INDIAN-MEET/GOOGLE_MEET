@@ -82,3 +82,4 @@ export function InvitePanel({ roomCode, onClose }: { roomCode: string; onClose: 
     </aside>
   );
 }
+

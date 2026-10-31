@@ -14,3 +14,4 @@ export async function getMessages(roomCode: string, limit = 50): Promise<ChatMes
   const d = res.data.data;
   return Array.isArray(d) ? d : d.messages ?? [];
 }
+

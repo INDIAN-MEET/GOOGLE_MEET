@@ -115,3 +115,4 @@ export function ControlsBar({ media, session, isHost, panel, onPanel, onLeave, o
     </div>
   );
 }
+

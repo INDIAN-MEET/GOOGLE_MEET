@@ -19,3 +19,4 @@ export function ProtectedRoute() {
   // STEP 3 — logged in: render the child route
   return <Outlet />;
 }
+

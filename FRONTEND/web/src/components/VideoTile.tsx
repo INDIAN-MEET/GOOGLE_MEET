@@ -34,3 +34,4 @@ export function VideoTile({ stream, name, muted = false, mirror = false, videoOf
     </div>
   );
 }
+

@@ -63,3 +63,4 @@ export function ChatPanel({ session, myUserId, onClose }: Props) {
     </aside>
   );
 }
+

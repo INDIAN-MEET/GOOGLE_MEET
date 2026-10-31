@@ -68,3 +68,4 @@ input { background: var(--bg); border: 1px solid var(--line); color: var(--text)
   .panel { position: fixed; inset: 0; z-index: 10; }
   .grid { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
 }
+
