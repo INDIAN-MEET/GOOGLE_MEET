@@ -8,11 +8,12 @@ export async function produceHandler(req: Request, res: Response, next: NextFunc
     try {
         // STEP 1: userId is the new field
         const { roomId, peerId, transportId, kind, rtpParameters, source, userId  } = req.body ?? {};
+        const normalizedSource = source === 'cam' ? 'camera' : source;
 
         if (
             !roomId || !peerId || !transportId ||
             !isValidKind(kind) ||
-            !isValidSource(source) ||
+            !isValidSource(normalizedSource) ||
             !rtpParameters || typeof rtpParameters !== 'object'
         ) {
             throw new AppError(
@@ -32,7 +33,7 @@ export async function produceHandler(req: Request, res: Response, next: NextFunc
             transportId,
             kind,
             rtpParameters,
-            source,
+            normalizedSource,
             typeof userId === 'string' ? userId : undefined,
         );
 

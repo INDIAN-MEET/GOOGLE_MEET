@@ -9,18 +9,21 @@ A Node.js/TypeScript microservices application for real-time video calling. Clie
 
 ```mermaid
 graph TD
-    Client["Browser Client"]
+    Client["Browser Frontend Client :5173"]
 
     subgraph Gateway["API Gateway :4000"]
         GW["/api/*  —  http-proxy-middleware"]
     end
 
     subgraph Services
-        AUTH["Auth Service :4001 PostgreSQL auth_db"]
-        USER["User Service :4002 PostgreSQL user_db"]
-        ROOM["Room Service :4003 PostgreSQL room_db"]
-        SIG["Signaling Service :4004 stateless — Redis for presence"]
-        CHAT["Chat Service :4005 MongoDB chat_db"]
+        AUTH["Auth Service :4001 (PostgreSQL auth_db)"]
+        USER["User Service :4002 (PostgreSQL user_db)"]
+        ROOM["Room Service :4003 (PostgreSQL room_db)"]
+        SIG["Signaling Service :4004 (Stateless Socket.IO)"]
+        CHAT["Chat Service :4005 (MongoDB chat_db)"]
+        SFU["SFU Service :4006 (Mediasoup Media Router)"]
+        REC["Recording Service :4007 (PostgreSQL recording_db)"]
+        NOTIF["Notification Service :4008 (PostgreSQL notification_db)"]
     end
 
     subgraph Infra
@@ -28,26 +31,38 @@ graph TD
         MONGO[(MongoDB :27017)]
         REDIS[(Redis :6379)]
         COTURN["coturn STUN/TURN :3478"]
+        MAILPIT["Mailpit SMTP/Web :1025/:8025"]
     end
 
     Client -->|"REST /api/*"| GW
-    Client -->|"WebSocket direct"| SIG
+    Client -->|"Socket.IO direct"| SIG
+    Client -->|"WebRTC RTP"| SFU
 
     GW -->|proxy| AUTH
     GW -->|proxy| USER
     GW -->|proxy| ROOM
     GW -->|proxy| CHAT
+    GW -->|proxy| REC
+    GW -->|proxy| NOTIF
 
     AUTH --> PG
     AUTH -->|"PUBLISH user-created"| REDIS
     USER --> PG
     USER -->|"SUBSCRIBE user-created"| REDIS
     ROOM --> PG
-    SIG -->|"GET /v1/rooms/:code HTTP"| ROOM
+    ROOM -->|"PUBLISH room-events"| REDIS
+    SIG -->|"REST /v1/rooms/:code"| ROOM
     SIG -->|"SADD/SREM room:code:members"| REDIS
+    SIG <-->|"Internal SFU API"| SFU
+    SIG -->|"SUBSCRIBE room-events, recording-events"| REDIS
     CHAT --> MONGO
     CHAT -->|"SUBSCRIBE chat-message"| REDIS
     SIG -->|"PUBLISH chat-message"| REDIS
+    REC --> PG
+    REC -->|"PUBLISH recording-events"| REDIS
+    NOTIF --> PG
+    NOTIF -->|"SUBSCRIBE room-events"| REDIS
+    NOTIF -->|"SMTP"| MAILPIT
 
     Client -->|"STUN/TURN"| COTURN
     AUTH -->|"HMAC-SHA1 credentials"| COTURN
@@ -56,6 +71,8 @@ graph TD
 > **Redis pub/sub flows:**
 > - `auth-service` PUBLISHes `user-created { userId }` → `user-service` SUBSCRIBEs and auto-creates a `Profile` row
 > - `signaling-service` PUBLISHes `chat-message { roomId, senderId, senderName, text }` → `chat-service` SUBSCRIBEs and persists to MongoDB
+> - `room-service` PUBLISHes `room-events { type: 'room-ended', roomCode }` → `signaling-service` terminates socket rooms & `notification-service` cancels pending reminders
+> - `recording-service` PUBLISHes `recording-events { type, roomCode, recordingId }` → `signaling-service` broadcasts status changes to meeting participants
 
 ---
 
@@ -63,7 +80,8 @@ graph TD
 
 | Service | Port | Database | Status |
 |---|---|---|---|
-| api-gateway | 4000 | None | ✅ Active |
+| frontend | 5173 | React 19 SPA + mediasoup-client | ✅ Active |
+| api-gateway | 4000 | None (Rate limit in Redis) | ✅ Active |
 | auth-service | 4001 | PostgreSQL (`auth_db`) | ✅ Active |
 | user-service | 4002 | PostgreSQL (`user_db`) | ✅ Active |
 | room-service | 4003 | PostgreSQL (`room_db`) | ✅ Active |
@@ -73,7 +91,7 @@ graph TD
 | recording-service | 4007 | PostgreSQL (`recording_db`) | ✅ Active |
 | notification-service | 4008 | PostgreSQL (`notification_db`) | ✅ Active |
 | mailpit | 1025 / 8025 | In-memory | ✅ Active |
-| coturn | 3478 UDP | — | ✅ Defined in docker-compose |
+| coturn | 3478 UDP | — | ✅ Active |
 | prometheus | 9090 | Time-series volume | ✅ Active |
 | grafana | 3001 | SQLite (`grafana_data`) | ✅ Active |
 | jaeger | 16686 | In-memory / OTLP | ✅ Active |
@@ -305,12 +323,48 @@ GOOGLE_MEET/
 │   └── notification-service/    # :4008 — BullMQ + Nodemailer email invites & reminders
 ├── shared/
 │   └── observability/           # config, metrics, tracing, logContext (synced to services)
+├── FRONTEND/
+│   └── web/                     # :5173 — React 19 + mediasoup-client web application
 ├── scripts/
 │   ├── sync-observability.ps1   # Syncs shared observability files & checks drift
-│   └── e2e-observability.mjs    # End-to-end observability test suite
+│   ├── e2e-observability.mjs    # End-to-end observability test suite
+│   ├── e2e-all-services.mjs     # Complete REST health & probe suite across 9 microservices
+│   ├── test-first-time-join.mjs # Pre-join lobby & first-time join test (0 reloads)
+│   ├── e2e-full-meet-call.mjs   # Headless browser multi-party call (WebRTC, chat, invites, recording)
+│   ├── peer-join-test.mjs       # Live AI peer joining socket & SFU transports
+│   ├── test-recording-stop.mjs  # Tests recording start and stop by UUID and roomCode
+│   └── generate_docx_report.py  # Generates styled Word (.docx) test verification report
 └── test-client/
     ├── index.html
     └── app.js
+```
+
+---
+
+## Frontend & End-to-End Verification (Phase F)
+
+The web client is built with React 19, TypeScript, and Vite, served in production through Nginx on port `5173`:
+- **Web App URL:** `http://localhost:5173`
+- **Mailpit Web Inbox:** `http://localhost:8025` (local SMTP email catcher)
+- **Word (.docx) Report:** `GOOGLE_MEET_E2E_TEST_RESULTS.docx`
+
+### Running the Test Automation Suites
+
+```powershell
+# 1. Probe all backend microservices & frontend container via REST
+node scripts/e2e-all-services.mjs
+
+# 2. Test pre-join lobby and first-attempt join without page reload
+node scripts/test-first-time-join.mjs
+
+# 3. Complete multi-party browser E2E test (Host + Guest WebRTC, chat, invites, recording, room end)
+node scripts/e2e-full-meet-call.mjs
+
+# 4. Join any room as an active automated peer
+node scripts/peer-join-test.mjs <room-code>
+
+# 5. Compile the comprehensive test results into a Microsoft Word document (.docx)
+python scripts/generate_docx_report.py
 ```
 
 ---

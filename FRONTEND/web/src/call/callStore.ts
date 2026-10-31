@@ -28,7 +28,7 @@ interface CallState {
   recording: { state: RecState; recordingId?: string };
 
   setPhase: (p: Phase) => void;
-  setError: (message: string) => void;
+  setError: (message: string | null) => void;
   setConnection: (c: 'connected' | 'reconnecting') => void;
   setLocal: (s: MediaStream | null) => void;
   setSharing: (v: boolean) => void;
@@ -63,7 +63,7 @@ export const useCallStore = create<CallState>((set) => ({
 
   // STEP 3 — simple setters
   setPhase: (phase) => set({ phase }),
-  setError: (error) => set({ error, phase: 'error' }),
+  setError: (error) => set({ error, phase: error ? 'error' : 'idle' }),
   setConnection: (connection) => set({ connection }),
   setLocal: (local) => set({ local }),
   setSharing: (sharing) => set({ sharing }),

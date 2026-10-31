@@ -10,8 +10,8 @@
 According to the master implementation plan in [`STEP.MD`](file:///c:/Users/swaru/OneDrive/Desktop/PROJECT/GOOGLE_MEET/STEP.MD), the project follows a **16-Phase Microservices Build Order**. 
 
 ### Status Overview
-* **Phases 0 through 13** are **COMPLETED** (Infrastructure, API Gateway with Phase 12 Hardening, Auth, User, Room, Signaling, WebRTC Verification Client, STUN/TURN, Chat, SFU mediasoup, Recording, Notification Services, and Observability & Telemetry Infrastructure).
-* **Phases 14 through 16** and **Phase F** are pending implementation.
+* **Phases 0 through 13** and **Phase F** are **COMPLETED** (Infrastructure, API Gateway with Phase 12 Hardening, Auth, User, Room, Signaling, WebRTC Verification Client, STUN/TURN, Chat, SFU mediasoup, Recording, Notification Services, Observability & Telemetry Infrastructure, and the full interactive React 19 Frontend Web Application).
+* **Phases 14 through 16** are pending implementation.
 
 | Phase | Service / Component | Status | Storage / Tech Stack | Primary Responsibility |
 | :--- | :--- | :---: | :--- | :--- |
@@ -29,6 +29,7 @@ According to the master implementation plan in [`STEP.MD`](file:///c:/Users/swar
 | **Phase 11**| **Notification Service**| ✅ Completed | Nodemailer, Mailpit, BullMQ, Postgres (`notification_db`) | Email meeting invitations, scheduled meeting reminders, cancellation on room end |
 | **Phase 12**| **Gateway Hardening** | ✅ Completed | Express 5, `express-rate-limit`, `rate-limit-redis`, ioredis | Tiered rate limiting, proxy error trap (502/504), request ID tracing, /health & /ready |
 | **Phase 13**| **Observability** | ✅ Completed | Prometheus, Grafana, Jaeger, OpenTelemetry, prom-client | Distributed tracing, low-cardinality metrics, alert rules & dashboards |
+| **Phase F** | **Frontend (React)** | ✅ Completed | React 19, TypeScript, Vite, mediasoup-client, Nginx | Responsive WebRTC video grid, chat, recordings, email invites, host controls |
 | **Phase 14**| **CI/CD** | ❌ Pending | GitHub Actions | Automated lint, build, test & deploy pipelines |
 | **Phase 15**| **Kubernetes (K8s)** | ❌ Pending | K8s Manifests, Helm | Container orchestration for production |
 | **Phase 16**| **Load Testing** | ❌ Pending | Artillery, PgBouncer | Concurrency benchmarks & stress testing |
@@ -326,9 +327,24 @@ flowchart TD
 
 ---
 
-## 🚀 4. Remaining Roadmap (Phases 14 to 16 & Phase F)
+### 11. Frontend Web Client (`/FRONTEND/web`)
+* **Port:** `5173` (Served via Nginx in Docker; Vite dev server locally)
+* **Tech Stack:** React 19, TypeScript, Vite, `mediasoup-client`, `socket.io-client`, Axios, Zustand
+* **Role:** Full interactive Google Meet web user interface.
+* **Capabilities & Functionality:**
+  - **Auth & Session Management:** Signup, login, JWT storage in memory, auto-refresh via HTTP-only cookie, TURN credentials fetching from Auth Service.
+  - **Pre-Join Green Room:** Live video/audio device preview, mic/camera mute toggles, device error guards, first-click join with zero page reloads.
+  - **Mediasoup SFU Call Engine:** RTP router capability negotiation, send/receive WebRTC transports, multi-peer video tiles, track swapping, and `close-producer` notifications.
+  - **Real-Time Chat:** Socket.IO bidirectional room chat with MongoDB persistence and history backfill.
+  - **Email Invitations & Share Link:** 1-click meeting URL clipboard copy and BullMQ email dispatcher via Notification Service with local Mailpit integration (`http://localhost:8025`).
+  - **Meeting Recordings:** Host-privileged start and stop controls supporting both UUID and roomCode identifiers, status polling, and playback/download.
+  - **Host Controls:** Privileged "Invite guests" and "End meeting for all" with Redis `room-events` pub/sub termination propagation.
 
-To transform this into a production-ready enterprise WebRTC platform, the following phases outlined in [`STEP.MD`](file:///c:/Users/swaru/OneDrive/Desktop/PROJECT/GOOGLE_MEET/STEP.MD) remain to be built:
+---
+
+## 🚀 4. Remaining Roadmap (Phases 14 to 16)
+
+To transform this into a production-ready enterprise WebRTC platform, the following phases outlined in [`STEP.MD`](file:///c:/Users/swaru/OneDrive/Desktop/PROJECT/GOOGLE_MEET/STEP.MD) remain:
 
 1. **Phase 14 — CI/CD Pipeline**:  
    - Setup GitHub Actions workflows to lint, test, build Docker images, verify observability sync (`sync-observability.ps1 -CheckOnly`), and apply database migrations automatically.
@@ -336,24 +352,32 @@ To transform this into a production-ready enterprise WebRTC platform, the follow
    - Provision Helm charts, ingress controllers, HPAs (Horizontal Pod Autoscalers), and StatefulSets for Coturn, reusing Prometheus alerts as `PrometheusRule` resources.
 3. **Phase 16 — Load Testing & Security**:  
    - Conduct Artillery load tests, PgBouncer pooling, and security penetration hardening while monitoring Grafana dashboards for latency and saturation.
-4. **Phase F — Next.js 15 Full Frontend Client**:  
-   - Complete Google Meet clone UI with responsive grid, screenshare, chat, host controls, and recording playback.
 
 ---
 
 ## 📌 Summary of How to Run the Completed Stack
 
-1. **Start all infrastructure and completed services:**
+1. **Start all 18 infrastructure and application containers:**
    ```bash
-   docker-compose up --build -d
+   docker compose up --build -d
    ```
-2. **Verify Service Health via Gateway:**
-   - Auth Service: `http://localhost:4000/api/auth/health`
-   - User Service: `http://localhost:4000/api/users/health`
-   - Room Service: `http://localhost:4000/api/v1/rooms/health`
-3. **Test WebRTC Video Call:**
-   ```bash
-   cd test-client
-   npx serve .
+2. **Access the Web Application:**
+   - Web App: `http://localhost:5173`
+   - Mailpit Web Inbox: `http://localhost:8025`
+   - Prometheus UI: `http://localhost:9090`
+   - Grafana Dashboards: `http://localhost:3001` (admin / admin12345678)
+   - Jaeger Tracing: `http://localhost:16686`
+3. **Run Automated Test Suites:**
+   ```powershell
+   # 1. Probe all backend microservices via REST
+   node scripts/e2e-all-services.mjs
+
+   # 2. Test pre-join lobby & first-time join without reload
+   node scripts/test-first-time-join.mjs
+
+   # 3. Multi-party headless browser E2E test (Host + Guest WebRTC, chat, invites, recording)
+   node scripts/e2e-full-meet-call.mjs
+
+   # 4. Compile Word document test report (.docx)
+   python scripts/generate_docx_report.py
    ```
-   Open `http://localhost:3000` in two browser tabs, paste JWT access tokens & a room code, and join to verify live video/audio streaming.

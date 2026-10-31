@@ -49,7 +49,7 @@
 - [Phase 14 — CI/CD [⏳ PENDING]](#phase-14--cicd--pending)
 - [Phase 15 — Kubernetes Deployment [⏳ PENDING]](#phase-15--kubernetes-deployment--pending)
 - [Phase 16 — Load Testing &amp; Security [⏳ PENDING]](#phase-16--load-testing--security--pending)
-- [Phase F — Frontend (React App) [⏳ PENDING]](#phase-f--frontend-react-app--pending)
+- [Phase F — Frontend (React App) [✅ COMPLETED]](#phase-f--frontend-react-app--completed)
 - [Full Build Order — Architectural Diagram](#full-build-order--architectural-diagram)
 
 ---
@@ -394,10 +394,24 @@ flowchart TD
 
 ---
 
-## Phase F — Frontend (React App) [⏳ PENDING]
+## Phase F — Frontend (React App) [✅ COMPLETED]
 
-**Goal:** Full interactive React frontend with mediasoup-client video grid, auth flows, chat panel, room controls, and audio/video settings.
+**Goal:** Full interactive React frontend with mediasoup-client video grid, auth flows, chat panel, room controls, audio/video settings, and end-to-end browser automation.
+**Location:** [`FRONTEND/web/`](file:///c:/Users/swaru/OneDrive/Desktop/PROJECT/GOOGLE_MEET/FRONTEND/web)
 **Guide:** [`docs/Phase_F_frontend_guide.md`](file:///c:/Users/swaru/OneDrive/Desktop/PROJECT/GOOGLE_MEET/docs/Phase_F_frontend_guide.md)
+**Status:** Completed, containerized (`google_meet-frontend` on port `5173`), and verified across all features:
+- **Authentication:** Signup, login, JWT storage, automatic refresh, and Coturn TURN credentials retrieval.
+- **Pre-Join Lobby:** Hardware media stream initialization, mic/camera mute toggles, device permission error handling, and 100% first-time join without requiring page reloads.
+- **WebRTC & SFU Media:** Mediasoup device capability exchange, send/receive WebRTC transports, multi-peer video tile layout, audio/video track swapping, and `close-producer` notification.
+- **Real-Time Chat:** Socket.IO bidirectional messaging, roomCode mapping, and MongoDB persistent chat history.
+- **Email Invitations:** Notification service BullMQ queue, local Mailpit integration (`http://localhost:8025`), and instant 1-click meeting link clipboard copy.
+- **Meeting Recordings:** Start/stop controls supporting both UUID and roomCode parameters, status polling, and FFmpeg segment conversion.
+- **Host Controls:** Privileged "Invite guests" and "End meeting for all" with Redis `room-events` pub/sub termination propagation.
+- **Verification Scripts:**
+  - `node scripts/e2e-all-services.mjs` (15/15 checks passed)
+  - `node scripts/test-first-time-join.mjs` (First-time join without reload verified)
+  - `node scripts/e2e-full-meet-call.mjs` (Full multi-party browser E2E test passed)
+  - `node scripts/generate_docx_report.py` (Generates formatted Word report)
 
 ---
 
@@ -437,7 +451,7 @@ flowchart TD
     style P10 fill:#e8ffe8,stroke:#3fae3f
     style P11 fill:#e8ffe8,stroke:#3fae3f
     style P12 fill:#e8ffe8,stroke:#3fae3f
-    style PF fill:#fff4e0,stroke:#d99a2b
+    style PF fill:#e8ffe8,stroke:#3fae3f
     style P13 fill:#e8ffe8,stroke:#3fae3f
     style P14 fill:#fff4e0,stroke:#d99a2b
     style P15 fill:#fff4e0,stroke:#d99a2b
