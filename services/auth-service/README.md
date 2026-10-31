@@ -1,4 +1,4 @@
-﻿# auth-service
+# auth-service
 
 **Port:** 4001 | **Database:** PostgreSQL (`auth_db`)
 
@@ -28,6 +28,7 @@ Internal mount: `app.use('/api/v1', v1Routes)` → `router.use('/auth', authRout
 | GET  | `/api/v1/auth/turn-credentials` | ✅ JWT | Returns `iceServers` array with STUN and TURN credentials (10 min TTL) |
 | POST | `/api/v1/logout` | ✅ JWT (via Gateway) | TODO: check if logoutController deletes the refresh token from DB |
 | GET  | `/api/v1/internal/verify-token` | Bearer token | Verifies JWT, returns `{ valid: bool, userId? }` — not called by other services currently |
+| GET  | `/metrics` | Bearer `METRICS_TOKEN` | Prometheus exposition format (scraped by Prometheus container; not routed via Gateway) |
 
 > **Note on logout path:** In `v1/index.ts`, logout is mounted as `router.post('/logout', logoutController)`, making its full path `/api/v1/logout` (not `/api/v1/auth/logout`). The Gateway rewrite maps `/auth/logout` → `/api/v1/auth/logout`. This is a **mismatch**: the Gateway forwards to `/api/v1/auth/logout` but the service only handles `/api/v1/logout`. Test this endpoint to confirm behavior.
 
@@ -88,6 +89,11 @@ Source: `.env.docker`
 | `TURN_SECRET` | `cb914f8e...` | ✅ |
 | `TURN_REALM` | `videomeet.local` | ✅ |
 | `NODE_ENV` | `production` | ✅ |
+| `OTEL_SERVICE_NAME` | `auth-service` | ✅ |
+| `METRICS_ENABLED` | `true` | ❌ (default `true`) |
+| `METRICS_TOKEN` | `secret` | ✅ (in production) |
+| `OTEL_ENABLED` | `true` | ❌ (default `true`) |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | `http://jaeger:4318` | ❌ |
 
 ---
 

@@ -10,8 +10,8 @@
 According to the master implementation plan in [`STEP.MD`](file:///c:/Users/swaru/OneDrive/Desktop/PROJECT/GOOGLE_MEET/STEP.MD), the project follows a **16-Phase Microservices Build Order**. 
 
 ### Status Overview
-* **Phases 0 through 12** are **COMPLETED** (Infrastructure, API Gateway with Phase 12 Hardening, Auth, User, Room, Signaling, WebRTC Verification Client, STUN/TURN, Chat, SFU mediasoup, Recording, and Notification Services).
-* **Phases 13 through 16** and **Phase F** are pending implementation.
+* **Phases 0 through 13** are **COMPLETED** (Infrastructure, API Gateway with Phase 12 Hardening, Auth, User, Room, Signaling, WebRTC Verification Client, STUN/TURN, Chat, SFU mediasoup, Recording, Notification Services, and Observability & Telemetry Infrastructure).
+* **Phases 14 through 16** and **Phase F** are pending implementation.
 
 | Phase | Service / Component | Status | Storage / Tech Stack | Primary Responsibility |
 | :--- | :--- | :---: | :--- | :--- |
@@ -28,7 +28,7 @@ According to the master implementation plan in [`STEP.MD`](file:///c:/Users/swar
 | **Phase 10**| **Recording Service** | ✅ Completed | FFmpeg, BullMQ, Postgres (`recording_db`) | Server-side RTP capture, BullMQ MP4 transcode, REST download, events & lifecycle |
 | **Phase 11**| **Notification Service**| ✅ Completed | Nodemailer, Mailpit, BullMQ, Postgres (`notification_db`) | Email meeting invitations, scheduled meeting reminders, cancellation on room end |
 | **Phase 12**| **Gateway Hardening** | ✅ Completed | Express 5, `express-rate-limit`, `rate-limit-redis`, ioredis | Tiered rate limiting, proxy error trap (502/504), request ID tracing, /health & /ready |
-| **Phase 13**| **Observability** | ⏳ Partial | Pino HTTP (Prometheus/Grafana planned) | Structured logging, metrics & tracing |
+| **Phase 13**| **Observability** | ✅ Completed | Prometheus, Grafana, Jaeger, OpenTelemetry, prom-client | Distributed tracing, low-cardinality metrics, alert rules & dashboards |
 | **Phase 14**| **CI/CD** | ❌ Pending | GitHub Actions | Automated lint, build, test & deploy pipelines |
 | **Phase 15**| **Kubernetes (K8s)** | ❌ Pending | K8s Manifests, Helm | Container orchestration for production |
 | **Phase 16**| **Load Testing** | ❌ Pending | Artillery, PgBouncer | Concurrency benchmarks & stress testing |
@@ -186,6 +186,38 @@ According to the master implementation plan in [`STEP.MD`](file:///c:/Users/swar
 
 ---
 
+### 12. Gateway Hardening & Security Layer (`/services/api-gateway`)
+* **Port:** `4000`
+* **Tech Stack:** Express 5, `express-rate-limit`, `rate-limit-redis`, `http-proxy-middleware`, `ioredis`
+* **Role:** Production perimeter hardening, anti-spoofing, tiered rate limiting, and sanitized error trapping.
+* **Capabilities & Functionality:**
+  - **Tiered Rate Limiting:** Enforces Redis sliding-window limiters with standardized draft-7 `RateLimit` and `Retry-After` headers (Global 300/min, Auth 10/15min fail-closed, Refresh 30/15min, Standard API 100/min, Recording Downloads 120/hr).
+  - **Proxy Error Trap (502/504):** Converts low-level upstream network failures (`ECONNREFUSED`, timeouts) into client-safe JSON responses, incrementing `gateway_proxy_errors_total` without leaking internal network topologies or stack traces.
+  - **Anti-Spoofing & Request Tracing:** Sanitizes client-supplied `x-user-id` headers and propagates unique UUID `x-request-id` headers across all downstream services.
+  - **Liveness & Readiness Probes:** Provides un-logged, un-limited `/health` (process liveness) and `/ready` (Redis connectivity readiness) endpoints.
+
+---
+
+### 13. Observability & Telemetry Infrastructure (`/infra/prometheus`, `/infra/grafana`, `/shared/observability`)
+* **Ports:** `9090` (Prometheus), `3001` (Grafana), `16686` (Jaeger)
+* **Tech Stack:** OpenTelemetry Node SDK, Prometheus (`prom-client`), Jaeger (OTLP/HTTP), Grafana 12, Pino (`traceMixin`)
+* **Role:** Platform-wide telemetry collection, low-cardinality metric exposition, distributed request tracing, automated alerting, and consolidated visualization.
+* **Capabilities & Functionality:**
+  - **Global Protected `/metrics`:** Every microservice exports Prometheus metrics on `GET /metrics`, guarded by constant-time Bearer token verification (`METRICS_BEARER_TOKEN`).
+  - **Distributed Tracing (OpenTelemetry + Jaeger):** Automatic W3C TraceContext propagation across HTTP calls with OTLP/HTTP export to Jaeger (`http://jaeger:4318/v1/traces`), linking API Gateway requests through downstream service execution.
+  - **Pino Structured Log Correlation:** Automatically injects active `trace_id` and `span_id` into all application logs via `traceMixin`.
+  - **Low-Cardinality Route Protection:** API Gateway maps dynamic paths to fixed known prefixes (`/api/auth`, `/api/v1/rooms`, etc.) to prevent high-cardinality time series explosions in Prometheus.
+  - **Service-Specific Domain Metrics:**
+    - `signaling_connected_sockets` (gauge) & `signaling_events_total` (counter) on Signaling Service.
+    - Mediasoup worker, router, transport, producer, consumer metrics on SFU Service.
+    - BullMQ job state gauges (`bullmq_jobs_waiting`, `active`, `failed`, `completed`) on Recording & Notification Services.
+    - Notification email delivery counters (`notifications_emails_sent_total`).
+  - **Production Alert Rules (`infra/prometheus/alerts.yml`):** Pre-configured rules for `ServiceDown`, `HighHttpErrorRate`, `HighHttpLatencyP95`, `ProxyErrorsSpike`, `RateLimitSaturation`, `BullMQFailedJobsAccumulating`, and `SfuPeerLoadHigh`.
+  - **Grafana Auto-Provisioned Dashboards (`infra/grafana/`):** Pre-configured Prometheus and Jaeger datasources, plus the *Video Meet — Overview* dashboard (`video-meet-overview.json`) with 10 real-time observability panels.
+  - **Verification Suite:** Validated via automated 44-assertion test suite in `scripts/e2e-observability.mjs` and sync script `scripts/sync-observability.ps1`.
+
+---
+
 ## 🏗️ 3. Architecture & Data Flow
 
 ```mermaid
@@ -224,6 +256,12 @@ flowchart TD
         COTURN["📡 Coturn (STUN/TURN)"]
     end
 
+    subgraph Observability & Monitoring
+        PROM["📊 Prometheus (:9090)"]
+        GRAFANA["📈 Grafana (:3001)"]
+        JAEGER["🔍 Jaeger (:16686)"]
+    end
+
     %% Client Interactions
     Browser -- "HTTP Requests" --> GW
     Browser -- "WebSocket (WSS)" --> SIGNAL
@@ -260,23 +298,45 @@ flowchart TD
     REC -- "BullMQ Jobs" --> REDIS
     NOTIF -- "BullMQ Invites & Reminders" --> REDIS
     NOTIF -- "SMTP Email Dispatch" --> MAILPIT
+
+    %% Observability Data Flow
+    GW -. "/metrics" .-> PROM
+    AUTH -. "/metrics" .-> PROM
+    USER -. "/metrics" .-> PROM
+    ROOM -. "/metrics" .-> PROM
+    CHAT -. "/metrics" .-> PROM
+    SIGNAL -. "/metrics" .-> PROM
+    SFU -. "/metrics" .-> PROM
+    REC -. "/metrics" .-> PROM
+    NOTIF -. "/metrics" .-> PROM
+
+    GW -. "OTLP Spans" .-> JAEGER
+    AUTH -. "OTLP Spans" .-> JAEGER
+    USER -. "OTLP Spans" .-> JAEGER
+    ROOM -. "OTLP Spans" .-> JAEGER
+    CHAT -. "OTLP Spans" .-> JAEGER
+    SIGNAL -. "OTLP Spans" .-> JAEGER
+    SFU -. "OTLP Spans" .-> JAEGER
+    REC -. "OTLP Spans" .-> JAEGER
+    NOTIF -. "OTLP Spans" .-> JAEGER
+
+    PROM --> GRAFANA
+    JAEGER --> GRAFANA
 ```
 
 ---
 
-## 🚀 4. Remaining Roadmap (Phases 13 to 16 & Phase F)
+## 🚀 4. Remaining Roadmap (Phases 14 to 16 & Phase F)
 
 To transform this into a production-ready enterprise WebRTC platform, the following phases outlined in [`STEP.MD`](file:///c:/Users/swaru/OneDrive/Desktop/PROJECT/GOOGLE_MEET/STEP.MD) remain to be built:
 
-1. **Phase 13 — Observability**:  
-   - Export Prometheus metrics (`/metrics`), Grafana dashboards, and OpenTelemetry distributed tracing across all microservices.
-2. **Phase 14 — CI/CD Pipeline**:  
-   - Setup GitHub Actions workflows to lint, test, build Docker images, and apply database migrations automatically.
-3. **Phase 15 — Kubernetes Deployment**:  
-   - Provision Helm charts, ingress controllers, HPAs (Horizontal Pod Autoscalers), and StatefulSets for Coturn.
-4. **Phase 16 — Load Testing & Security**:  
-   - Conduct Artillery load tests, PgBouncer pooling, and security penetration hardening.
-5. **Phase F — Next.js 15 Full Frontend Client**:  
+1. **Phase 14 — CI/CD Pipeline**:  
+   - Setup GitHub Actions workflows to lint, test, build Docker images, verify observability sync (`sync-observability.ps1 -CheckOnly`), and apply database migrations automatically.
+2. **Phase 15 — Kubernetes Deployment**:  
+   - Provision Helm charts, ingress controllers, HPAs (Horizontal Pod Autoscalers), and StatefulSets for Coturn, reusing Prometheus alerts as `PrometheusRule` resources.
+3. **Phase 16 — Load Testing & Security**:  
+   - Conduct Artillery load tests, PgBouncer pooling, and security penetration hardening while monitoring Grafana dashboards for latency and saturation.
+4. **Phase F — Next.js 15 Full Frontend Client**:  
    - Complete Google Meet clone UI with responsive grid, screenshare, chat, host controls, and recording playback.
 
 ---

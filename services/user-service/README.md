@@ -1,4 +1,4 @@
-﻿# user-service
+# user-service
 
 **Port:** 4002 | **Database:** PostgreSQL (`user_db`)
 
@@ -23,6 +23,7 @@ Internal mount: `app.use('/', profileRoutes)` — no version prefix.
 | GET   | `/me` | ✅ JWT | Returns the Profile row for `req.userId` |
 | PATCH | `/me` | ✅ JWT | Updates `displayName`, `avatarUrl`, `preferences` for `req.userId` |
 | GET   | `/health` | ❌ | Health check |
+| GET   | `/metrics` | Bearer `METRICS_TOKEN` | Prometheus exposition format (scraped by Prometheus container; not routed via Gateway) |
 
 > **Gateway path:** Clients call `/api/users/me` → rewritten to `/me` (Gateway strips `/users`).
 
@@ -66,6 +67,11 @@ Source: `.env.docker`
 | `JWT_ACCESS_SECRET` | `change_this_later...` | ✅ |
 | `REDIS_URL` | `redis://redis:6379` | ✅ |
 | `NODE_ENV` | `production` | ✅ |
+| `OTEL_SERVICE_NAME` | `user-service` | ✅ |
+| `METRICS_ENABLED` | `true` | ❌ (default `true`) |
+| `METRICS_TOKEN` | `secret` | ✅ (in production) |
+| `OTEL_ENABLED` | `true` | ❌ (default `true`) |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | `http://jaeger:4318` | ❌ |
 
 > **Note:** `env.ts` also exports `JWT_REFRESH_SECRET` but user-service never issues or validates refresh tokens — it is read but unused.
 

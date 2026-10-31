@@ -59,6 +59,7 @@ Source: `src/routes/proxyRoutes.ts`
 | GET  | `/v1/recordings/:recordingId` | ✅ | Standard (100/m) | `RECORDING_SERVICE_URL/v1/recordings/:recordingId` |
 | GET  | `/v1/recordings/:recordingId/download` | ✅ | Download (120/h) | `RECORDING_SERVICE_URL/v1/recordings/:recordingId/download` |
 | POST | `/v1/notifications/invites` | ✅ | Standard (100/m) | `NOTIFICATION_SERVICE_URL/v1/notifications/invites` |
+| GET  | `/metrics` | Bearer `METRICS_TOKEN` | None (Direct) | Prometheus exposition format (mounted before rate limiters) |
 | GET  | `/health` | ❌ | None (Direct) | Local Gateway process liveness (`200 OK`) |
 | GET  | `/ready` | ❌ | None (Direct) | Local Gateway + Redis readiness check (`200 OK` or `503`) |
 
@@ -83,6 +84,11 @@ Source: `.env.docker` and `.env.example`
 | `REDIS_URL` | `redis://redis:6379` | ✅ | Shared Redis for rate limiting |
 | `TRUST_PROXY` | `0` | ✅ | Number of upstream reverse proxies |
 | `BODY_LIMIT` | `100kb` | ✅ | Maximum incoming JSON body size |
+| `OTEL_SERVICE_NAME` | `api-gateway` | ✅ | Service identifier in Jaeger traces |
+| `METRICS_ENABLED` | `true` | ❌ (default `true`) | Enables `/metrics` endpoint |
+| `METRICS_TOKEN` | `secret` | ✅ | Bearer token required for `/metrics` |
+| `OTEL_ENABLED` | `true` | ❌ (default `true`) | Enables OpenTelemetry tracing |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | `http://jaeger:4318` | ❌ | Jaeger OTLP/HTTP endpoint |
 
 ---
 

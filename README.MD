@@ -169,6 +169,7 @@ Every service verifies JWTs **locally** using the shared `JWT_ACCESS_SECRET`. No
 | Notification Service (`authGuard.ts`) | `jwt.verify` local | Double-verifies |
 | Signaling Service (`socketAuth.ts`) | `jwt.verify` local | Reads token from `handshake.auth.token` or `handshake.query.token` |
 | Auth Service `/api/v1/internal/verify-token` | `jwt.verify` local | Exists but **not called by any other service** currently |
+| All Services (`GET /metrics`) | Bearer `METRICS_BEARER_TOKEN` (constant-time check) | Telemetry scraping only; not client-accessible or JWT-based |
 
 ---
 
@@ -203,7 +204,7 @@ Every service verifies JWTs **locally** using the shared `JWT_ACCESS_SECRET`. No
 
 ## Local Development
 
-All services use `tsx watch server.ts`. Do **not** run `node server.ts` directly on `.ts` files.
+All services use `tsx watch --env-file=.env server.ts` (configured under `npm run dev`). Do **not** run `node server.ts` directly on `.ts` files.
 
 ```bash
 cd services/api-gateway          && npm install && npm run dev   # :4000
@@ -217,7 +218,7 @@ cd services/recording-service    && npm install && npm run dev   # :4007
 cd services/notification-service && npm install && npm run dev   # :4008
 ```
 
-Each service reads its own `.env`. Copy `.env.docker` to `.env` and replace Docker hostnames with `localhost`.
+Each service reads its own `.env`. Copy `.env.docker` (or `.env.example`) to `.env` and replace Docker hostnames with `localhost`. Also provide `METRICS_TOKEN` and `OTEL_EXPORTER_OTLP_ENDPOINT` for observability if testing telemetry locally.
 
 Run Prisma migrations before first start for services with PostgreSQL schemas:
 ```bash
@@ -316,7 +317,17 @@ GOOGLE_MEET/
 
 ## Observability (Phase 13)
 
-- **Prometheus UI:** `http://localhost:9090` (Scrapes `/metrics` across all 9 services every 15s with alert rules).
-- **Grafana Dashboard:** `http://localhost:3001` (Pre-provisioned dashboard: *Video Meet — Overview*).
-- **Jaeger UI:** `http://localhost:16686` (Distributed tracing across API Gateway and backend microservices).
-- **Protected `/metrics`:** Every service exposes `GET /metrics` on its port, protected with Bearer `METRICS_TOKEN` (not routed through API Gateway for clients).
+Phase 13 introduces comprehensive platform-wide telemetry, metrics scraping, distributed tracing, alerting rules, and Grafana dashboard visualization:
+
+- **Prometheus UI:** `http://localhost:9090` (Scrapes `/metrics` across all 9 services every 15s using Bearer credentials; loaded with 7 alert rules from `infra/prometheus/alerts.yml`).
+- **Grafana Dashboard:** `http://localhost:3001` (User: `admin`, Password: set via `GRAFANA_ADMIN_PASSWORD` in root `.env`; pre-provisioned with Prometheus & Jaeger datasources and the 10-panel *Video Meet — Overview* dashboard).
+- **Jaeger UI:** `http://localhost:16686` (Distributed tracing across API Gateway and backend microservices via OpenTelemetry W3C TraceContext propagation).
+- **Protected `/metrics`:** Every service exposes `GET /metrics` on its port, protected with Bearer `METRICS_TOKEN` (constant-time timing-safe comparison; not routed through API Gateway for clients).
+- **Infrastructure Directories:**
+  - `infra/prometheus/` — `prometheus.yml` scrape configuration, `alerts.yml` alerting rules, `metrics_token`.
+  - `infra/grafana/` — Provisioning datasources, dashboard providers, and `dashboards/video-meet-overview.json`.
+  - `shared/observability/` — Canonical source of truth for config, metrics, tracing, and logContext.
+- **Verification Suite & Automation:**
+  - `powershell -ExecutionPolicy Bypass -File scripts/sync-observability.ps1 -CheckOnly` — Asserts zero code drift across service observability modules.
+  - `node scripts/e2e-observability.mjs` — Automated 44-assertion test verifying Bearer security, Prometheus targets, Jaeger trace correlation, Grafana provisioning, and chaos recovery.
+  - Complete operational testing guide available in [`docs/Phase_13_Verification_Guide.md`](file:///c:/Users/swaru/OneDrive/Desktop/PROJECT/GOOGLE_MEET/docs/Phase_13_Verification_Guide.md).

@@ -82,6 +82,20 @@ Source: `.env.docker`
 | `REDIS_URL` | `redis://redis:6379` | Redis connection URL for presence and Pub/Sub |
 | `ROOM_SERVICE_URL` | `http://room-service:4003` | Room Service internal URL |
 | `NODE_ENV` | `development` | Environment mode |
+| `OTEL_SERVICE_NAME` | `signaling-service` | Service identifier for OpenTelemetry traces |
+| `METRICS_ENABLED` | `true` | Enables `/metrics` endpoint |
+| `METRICS_TOKEN` | `secret` | Bearer token required for `/metrics` |
+| `OTEL_ENABLED` | `true` | Enables OpenTelemetry tracing |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | `http://jaeger:4318` | Jaeger OTLP/HTTP endpoint |
+
+---
+
+## HTTP & Observability Endpoints
+
+| Method | Path | Auth required | Description |
+|---|---|---|---|
+| GET | `/health` | ❌ | Liveness check |
+| GET | `/metrics` | Bearer `METRICS_TOKEN` | Prometheus exposition format. Exposes default Node metrics plus custom `signaling_connected_sockets` (gauge) and `signaling_events_total` (counter by direction and event name). |
 
 ---
 

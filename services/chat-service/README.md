@@ -23,6 +23,7 @@ Internal mount: `app.use('/api/v1/chat', chatRoutes)`
 |---|---|---|---|
 | GET | `/api/v1/chat/:roomId/messages` | ✅ JWT | Fetches historical messages for `roomId`. Query params: `limit` (default 50, max 200). |
 | GET | `/health` | ❌ | Health check returning `{ status: "ok", service: "chat-service" }`. |
+| GET | `/metrics` | Bearer `METRICS_TOKEN` | Prometheus exposition format (scraped by Prometheus container; not routed via Gateway). |
 
 > **Gateway Path:** Client calls `GET /api/v1/chat/:roomId/messages` through the API Gateway (`:4000`), which verifies JWT authentication before forwarding.
 
@@ -69,6 +70,11 @@ Source: `.env.docker`
 | `REDIS_URL` | `redis://redis:6379` | Redis connection URL |
 | `JWT_ACCESS_SECRET` | `secret` | Shared secret for verifying JWT tokens |
 | `NODE_ENV` | `development` | Environment mode |
+| `OTEL_SERVICE_NAME` | `chat-service` | Service identifier for OpenTelemetry traces |
+| `METRICS_ENABLED` | `true` | Enables `/metrics` endpoint |
+| `METRICS_TOKEN` | `secret` | Bearer token required for `/metrics` |
+| `OTEL_ENABLED` | `true` | Enables OpenTelemetry tracing |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | `http://jaeger:4318` | Jaeger OTLP/HTTP endpoint |
 
 ---
 

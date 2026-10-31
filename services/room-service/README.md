@@ -1,4 +1,4 @@
-﻿# room-service
+# room-service
 
 **Port:** 4003 | **Database:** PostgreSQL (`room_db`)
 
@@ -27,6 +27,7 @@ Internal mount: `app.use('/v1', roomRoutes)` — all routes require JWT (`router
 | POST | `/v1/rooms/:code/leave` | ✅ JWT | Sets `leftAt` timestamp on the caller's participant record |
 | POST | `/v1/rooms/:code/end` | ✅ JWT (host only) | Marks room `isActive=false`, sets `endedAt`; only host may call this |
 | GET  | `/health` | ❌ | Health check |
+| GET  | `/metrics` | Bearer `METRICS_TOKEN` | Prometheus exposition format (scraped by Prometheus container; not routed via Gateway) |
 
 > **Gateway path:** Clients must call `/api/v1/rooms/...` (the `/v1` prefix is **not** hidden by the Gateway — the rewrite is a no-op). This is the only service where `/v1` appears in the client-facing URL.
 
@@ -72,6 +73,11 @@ Source: `.env.example` / `.env.docker`
 | `DATABASE_URL` | `postgresql://postgres:postgres@localhost:5432/room_db` | ✅ |
 | `JWT_ACCESS_SECRET` | `replace_with_same_secret_as_auth_service` | ✅ |
 | `NODE_ENV` | `development` | ✅ |
+| `OTEL_SERVICE_NAME` | `room-service` | ✅ |
+| `METRICS_ENABLED` | `true` | ❌ (default `true`) |
+| `METRICS_TOKEN` | `secret` | ✅ (in production) |
+| `OTEL_ENABLED` | `true` | ❌ (default `true`) |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | `http://jaeger:4318` | ❌ |
 
 ---
 
