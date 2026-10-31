@@ -44,7 +44,7 @@ export const produceSchema = Joi.object({
   transportId: id,
   kind: Joi.string().valid('audio', 'video').required(),              // STEP 3
   rtpParameters: Joi.object().required(),
-  source: Joi.string().valid('camera', 'mic', 'screen').required(),   // STEP 3
+  source: Joi.string().valid('camera', 'mic', 'screen', 'cam').required(),   // STEP 3
   userId: Joi.string().trim().max(128).optional(),                    // STEP 4
 });
 

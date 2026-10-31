@@ -85,8 +85,9 @@ export function registerSfuHandlers(socket: Socket): void {
          * STEP 5a: userId comes from socket.data (set by socketAuth from the JWT).
          *          Nothing the client sends can change it.
          */
+        const normalizedSource = source === 'cam' ? 'camera' : (source || (kind === 'audio' ? 'mic' : 'camera'));
         const result = await sfu.produce(
-            roomCode, socket.id, transportId, kind, rtpParameters, source,
+            roomCode, socket.id, transportId, kind, rtpParameters, normalizedSource,
             socket.data.userId as string,                               // STEP 5a
         );
 
@@ -94,7 +95,7 @@ export function registerSfuHandlers(socket: Socket): void {
             producerId: result.producerId,
             socketId: socket.id,
             kind,
-            source,
+            source: normalizedSource,
         });
 
         return result;

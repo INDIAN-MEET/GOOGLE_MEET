@@ -71,6 +71,7 @@ export class CallSession {
   // JOIN
   // ===================================================================
   async join(stream: MediaStream | null): Promise<void> {
+    store().setError(null);
     store().setPhase('joining');
     this.localStream = stream;
     store().setLocal(stream);
