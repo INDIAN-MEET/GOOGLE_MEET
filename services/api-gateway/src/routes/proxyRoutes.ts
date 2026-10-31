@@ -33,10 +33,16 @@ router.use(
   ['/auth/logout', '/auth/me', '/auth/turn-credentials'],
   gatewayAuth,
   standardLimiter,
+);
+router.use(
   createServiceProxy({
     name: 'auth-service',
     target: AUTH_SERVICE_URL,
-    pathRewrite: { '^/auth': '/api/v1/auth' },
+    pathFilter: ['/auth/logout', '/auth/me', '/auth/turn-credentials'],
+    pathRewrite: {
+      '^/auth/logout': '/api/v1/logout',
+      '^/auth': '/api/v1/auth',
+    },
   }),
 );
 
