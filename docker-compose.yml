@@ -307,6 +307,24 @@ services:
     ports:
       - "127.0.0.1:16686:16686"   # UI. OTLP port 4318 stays inside the Docker network.
 
+  # ------------------------------------------------------------------
+  # frontend — React app served by nginx (host port 5173 -> container 80)
+  # ------------------------------------------------------------------
+  frontend:
+    build:
+      context: ./FRONTEND/web
+      args:
+        VITE_API_URL: http://localhost:4000
+        VITE_SIGNALING_URL: http://localhost:4004
+        VITE_SFU_URL: http://localhost:4004
+        VITE_TURN_URL: turn:localhost:3478
+    container_name: frontend
+    restart: unless-stopped
+    ports:
+      - "5173:80"
+    depends_on:
+      - api-gateway
+
 volumes:
   postgres_data:
   mongo_data:
