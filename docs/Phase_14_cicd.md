@@ -25,14 +25,14 @@ flowchart TD
 
 ## Target Pipeline Overview
 
-| Workflow               | Trigger                                           | Jobs                                                                                              |      Blocks merge?      |
-| :--------------------- | :------------------------------------------------ | :------------------------------------------------------------------------------------------------ | :---------------------: |
-| `ci.yml`             | PR + push to any branch                           | detect-changes → lint/typecheck/test (matrix) → prisma-check → observability-drift → frontend |           ✅           |
-| `docker.yml`         | PR (build only) + push to `main` (build + push) | build matrix of 10 images, Trivy scan                                                             |     ✅ (build/scan)     |
-| `e2e.yml`            | push to `main`, nightly, manual                 | `docker compose up`, run E2E scripts, upload logs                                               |       ✅ on main       |
-| `security.yml`       | PR + weekly                                       | `npm audit`, Gitleaks, Trivy fs scan                                                            | ⚠️ high/critical only |
-| `release.yml`        | tag `v*.*.*`                                    | retag images, GitHub Release notes, optional deploy                                               |           —           |
-| `deploy-staging.yml` | after successful `e2e.yml` on `main`          | SSH + `docker compose pull && up -d` (replaced by Helm in Phase 15)                             |           —           |
+| Workflow | Trigger | Jobs | Blocks merge? |
+| :-- | :-- | :-- | :---: |
+| `ci.yml` | PR + push to any branch | detect-changes → lint/typecheck/test (matrix) → prisma-check → observability-drift → frontend | ✅ |
+| `docker.yml` | PR (build only) + push to `main` (build + push) | build matrix of 10 images, Trivy scan | ✅ (build/scan) |
+| `e2e.yml` | push to `main`, nightly, manual | `docker compose up`, run E2E scripts, upload logs | ✅ on main |
+| `security.yml` | PR + weekly | `npm audit`, Gitleaks, Trivy fs scan | ⚠️ high/critical only |
+| `release.yml` | tag `v*.*.*` | retag images, GitHub Release notes, optional deploy | — |
+| `deploy-staging.yml` | after successful `e2e.yml` on `main` | SSH + `docker compose pull && up -d` (replaced by Helm in Phase 15) | — |
 
 **Services in the matrix (9 backend + 1 frontend):** `api-gateway`, `auth-service`, `user-service`, `room-service`, `signaling-service`, `chat-service`, `sfu-service`, `recording-service`, `notification-service`, `frontend`.
 
@@ -147,7 +147,6 @@ Changes to `shared/observability/**` intentionally trigger **all** services.
 ```
 
 **Notes**
-
 - `sfu-service` and `recording-service` depend on `mediasoup`, which compiles a native C++ worker during `npm ci`. Keep the default `ubuntu-latest` image (has `python3`, `make`, `g++`) and expect 2–4 min installs; the npm cache helps.
 - Services needing Redis/Postgres/Mongo in tests: add `services:` containers (`redis:7`, `postgres:16`, `mongo:7`) to the job, or mock at the client layer for unit tests and leave integration to the E2E job.
 
@@ -283,7 +282,6 @@ jobs:
 ```
 
 **Checklist**
-
 - If a Dockerfile copies `shared/observability`, set the build `context` to the repo root and pass `file:` instead, or confirm the sync script already copied the files into each service folder (current design).
 - Tag convention: `sha-<short>`, branch name, `latest` (main only), semver on tags.
 - Keep images non-root (gateway already is) and pin base image tags.
@@ -292,13 +290,13 @@ jobs:
 
 ## Step 14.9 — Security Scans (`security.yml`)
 
-| Check            | Tool                                                    | Fail on                            |
-| :--------------- | :------------------------------------------------------ | :--------------------------------- |
-| Secret leakage   | `gitleaks/gitleaks-action`                            | any finding                        |
-| Dependency vulns | `npm audit --omit=dev --audit-level=high` per service | high / critical                    |
-| Image vulns      | `aquasecurity/trivy-action` against each built image  | HIGH / CRITICAL with fix available |
-| Filesystem / IaC | `trivy fs --scanners vuln,secret,config .`            | HIGH / CRITICAL                    |
-| Dockerfile lint  | `hadolint/hadolint-action`                            | error                              |
+| Check | Tool | Fail on |
+| :-- | :-- | :-- |
+| Secret leakage | `gitleaks/gitleaks-action` | any finding |
+| Dependency vulns | `npm audit --omit=dev --audit-level=high` per service | high / critical |
+| Image vulns | `aquasecurity/trivy-action` against each built image | HIGH / CRITICAL with fix available |
+| Filesystem / IaC | `trivy fs --scanners vuln,secret,config .` | HIGH / CRITICAL |
+| Dockerfile lint | `hadolint/hadolint-action` | error |
 
 - Upload Trivy results as SARIF to the GitHub Security tab.
 - Make sure `infra/prometheus/metrics_token`, `.env`, and `.env.docker` files with real values are **not** committed. Commit only `.env.example`. Rotate any value that has ever been committed.
@@ -325,7 +323,6 @@ Steps:
 5. `docker compose down -v` in an `if: always()` step.
 
 **WebRTC-in-CI caveats**
-
 - Headless Chrome needs `--use-fake-ui-for-media-stream --use-fake-device-for-media-stream` so no real camera/mic is required.
 - mediasoup's UDP range `20000-20050` must be reachable from the browser on the same runner; set `MEDIASOUP_ANNOUNCED_IP=127.0.0.1` for CI.
 - GitHub-hosted runners have 2–4 vCPUs and limited RAM; the 18-container stack is heavy. Options: disable Grafana/Jaeger for the non-observability steps, or use a larger runner. Keep a 25–30 min job timeout.
