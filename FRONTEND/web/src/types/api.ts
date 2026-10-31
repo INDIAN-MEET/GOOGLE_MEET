@@ -81,7 +81,7 @@ export interface ChatMessage {
 
 // STEP 6 — recording-service
 export type RecordingStatus =
-  | 'STARTING' | 'RECORDING' | 'STOPPING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
+  | 'STARTING' | 'RECORDING' | 'STOPPING' | 'PROCESSING' | 'READY' | 'COMPLETED' | 'FAILED';
 export interface Recording {
   id: string;
   roomId?: string;

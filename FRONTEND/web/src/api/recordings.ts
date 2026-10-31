@@ -7,7 +7,7 @@ import type { ApiEnvelope, Recording } from '../types/api';
 
 // STEP 1 — start / stop
 export async function startRecording(roomCode: string): Promise<Recording> {
-  const res = await api.post<ApiEnvelope<Recording>>('/v1/recordings/start', { roomId: roomCode });
+  const res = await api.post<ApiEnvelope<Recording>>('/v1/recordings/start', { roomCode });
   return res.data.data;
 }
 export async function stopRecording(recordingId: string): Promise<void> {
@@ -16,11 +16,14 @@ export async function stopRecording(recordingId: string): Promise<void> {
 
 // STEP 2 — list recordings of a room, and read one (used for status polling)
 export async function listRecordings(roomCode: string): Promise<Recording[]> {
-  const res = await api.get<ApiEnvelope<Recording[] | { recordings: Recording[] }>>(
-    `/v1/recordings/room/${encodeURIComponent(roomCode)}`,
+  const res = await api.get<ApiEnvelope<{ items?: Recording[]; recordings?: Recording[] } | Recording[]>>(
+    `/v1/recordings?roomCode=${encodeURIComponent(roomCode)}`,
   );
-  const d = res.data.data;
-  return Array.isArray(d) ? d : d.recordings ?? [];
+  const d = res.data.data as any;
+  if (Array.isArray(d)) return d;
+  if (Array.isArray(d?.items)) return d.items;
+  if (Array.isArray(d?.recordings)) return d.recordings;
+  return [];
 }
 export async function getRecording(id: string): Promise<Recording> {
   const res = await api.get<ApiEnvelope<Recording>>(`/v1/recordings/${encodeURIComponent(id)}`);

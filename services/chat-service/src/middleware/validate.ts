@@ -10,7 +10,12 @@ export const validateQuery = (schema: Joi.ObjectSchema) => {
             logger.error({ error, path: req.path, method: req.method }, 'Validation error');
             return next(new AppError(error.details[0]?.message ?? 'Validation error', 400));
         }
-        req.query = value;
+        try {
+            Object.assign(req.query, value);
+        } catch {
+            // req.query is read-only in Express 5
+        }
+        res.locals.query = value;
         next();
     };
 };

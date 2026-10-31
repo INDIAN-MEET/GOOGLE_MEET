@@ -16,15 +16,11 @@ import logger from '../utils/logger.js';
  * @param socket - The authenticated socket sending the message
  */
 export function registerChatMessage(io: Server, socket: Socket): void {
-    socket.on('chat-message', async ({
-        roomId,
-        text,
-        senderName,
-    }: {
-        roomId: string;
-        text: string;
-        senderName?: string;   // client may send display name; falls back to userId
-    }) => {
+    socket.on('chat-message', async (raw: any) => {
+        const roomId = (raw?.roomId || raw?.roomCode || socket.data.roomCode) as string;
+        const text = raw?.text;
+        const senderName = raw?.senderName;
+
         logger.info(`[chat-message] from userId=${socket.data.userId} in room=${roomId}`);
 
         if (!roomId || !text?.trim()) {

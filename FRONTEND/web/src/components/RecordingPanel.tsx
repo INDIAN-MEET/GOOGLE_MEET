@@ -135,7 +135,7 @@ export function RecordingPanel({ roomCode, isHost, onClose }: Props) {
               {r.status}
               {r.durationSec ? ` · ${r.durationSec}s` : ''}
             </span>
-            {r.status === 'COMPLETED' && (
+            {(r.status === 'READY' || r.status === 'COMPLETED') && (
               <span className="row">
                 <button className="btn" disabled={busy} onClick={() => void onPlay(r.id)} title="Play">
                   ▶
