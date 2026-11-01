@@ -15,11 +15,11 @@ jobs:
     environment: staging
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Deploy to Remote VM via SSH
         if: ${{ env.STAGING_HOST != '' }}
-        uses: appleboy/ssh-action@v1.2.0
+        uses: appleboy/ssh-action@v1.2.5
         env:
           STAGING_HOST: ${{ secrets.STAGING_HOST }}
         with:
