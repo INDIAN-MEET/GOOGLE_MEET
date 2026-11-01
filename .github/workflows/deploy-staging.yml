@@ -4,7 +4,7 @@ on:
   workflow_run:
     workflows: ['E2E Integration Suite']
     types: [completed]
-    branches: [main]
+    branches: [master, main]
   workflow_dispatch:
 
 jobs:

@@ -3,7 +3,7 @@ name: Security Scans
 on:
   pull_request:
   push:
-    branches: [main, phase-14-cicd]
+    branches: [master, main, phase-14-cicd]
   schedule:
     - cron: '0 0 * * 0' # Weekly on Sunday
 
