@@ -80,6 +80,21 @@ graph TD
 
 ---
 
+## 🚀 Quickstart & Docker Guide
+
+Want to run the complete 18-container stack with 1 command?
+
+👉 **[Read the Complete Docker Startup & Running Guide](DOCKER_STARTUP_GUIDE.md)** for a beginner-friendly walkthrough including:
+- 1-click Docker Compose startup (`docker compose up -d`)
+- Pre-built GHCR release images (`docker-compose.release.yml`)
+- Browser endpoints & port directory (`http://localhost:5173`, Mailpit at `:8025`, Grafana at `:3001`, Jaeger at `:16686`)
+- Step-by-step feature walkthrough (Pre-join preview, video calling, chat, invites, cloud recordings)
+- Automated E2E test commands & troubleshooting tips
+
+---
+
+---
+
 ## Service Overview
 
 | Service | Port | Database | Status |
