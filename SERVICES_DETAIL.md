@@ -30,7 +30,7 @@ According to the master implementation plan in [`STEP.MD`](file:///c:/Users/swar
 | **Phase 12**| **Gateway Hardening** | ✅ Completed | Express 5, `express-rate-limit`, `rate-limit-redis`, ioredis | Tiered rate limiting, proxy error trap (502/504), request ID tracing, /health & /ready |
 | **Phase 13**| **Observability** | ✅ Completed | Prometheus, Grafana, Jaeger, OpenTelemetry, prom-client | Distributed tracing, low-cardinality metrics, alert rules & dashboards |
 | **Phase F** | **Frontend (React)** | ✅ Completed | React 19, TypeScript, Vite, mediasoup-client, Nginx | Responsive WebRTC video grid, chat, recordings, email invites, host controls |
-| **Phase 14**| **CI/CD** | ❌ Pending | GitHub Actions | Automated lint, build, test & deploy pipelines |
+| **Phase 14**| **CI/CD Pipeline** | ✅ Completed | GitHub Actions, GHCR, Buildx, Trivy, Gitleaks | Automated lint, build, test, Docker matrix & deploy pipelines |
 | **Phase 15**| **Kubernetes (K8s)** | ❌ Pending | K8s Manifests, Helm | Container orchestration for production |
 | **Phase 16**| **Load Testing** | ❌ Pending | Artillery, PgBouncer | Concurrency benchmarks & stress testing |
 
@@ -327,7 +327,7 @@ flowchart TD
 
 ---
 
-### 11. Frontend Web Client (`/FRONTEND/web`)
+### 12. Frontend Web Client (`/FRONTEND/web`)
 * **Port:** `5173` (Served via Nginx in Docker; Vite dev server locally)
 * **Tech Stack:** React 19, TypeScript, Vite, `mediasoup-client`, `socket.io-client`, Axios, Zustand
 * **Role:** Full interactive Google Meet web user interface.
@@ -342,15 +342,28 @@ flowchart TD
 
 ---
 
-## 🚀 4. Remaining Roadmap (Phases 14 to 16)
+### 13. CI/CD Pipeline (GitHub Actions)
+* **Configuration:** `.github/workflows/`
+* **Tech Stack:** GitHub Actions, GitHub Container Registry (GHCR), Docker Buildx, Trivy, Gitleaks, Dependabot
+* **Role:** Continuous Integration, automated testing, security scanning, image publishing, and continuous deployment.
+* **Capabilities & Functionality:**
+  - **Change-Detected Matrix CI (`ci.yml`):** Uses `dorny/paths-filter@v3` to lint (`oxlint`), typecheck (`tsc --noEmit`), unit/smoke test (`tsx --test`), and build only changed services on PRs; all services on `main`.
+  - **Prisma Schema Checks (`ci.yml`):** Automatically tests `prisma validate`, `prisma migrate deploy`, and `prisma migrate diff` schema drift detection with PostgreSQL service containers.
+  - **Observability Drift Guard (`ci.yml`):** Enforces `scripts/sync-observability.ps1 -CheckOnly` and Grafana dashboard JSON integrity.
+  - **Multi-Stage Docker Matrix (`docker.yml`):** Builds and layer-caches all 10 images, publishes versioned images to GHCR on `main` and semver tags (`v*.*.*`), and runs Trivy container vulnerability scanner.
+  - **Automated Security Scans (`security.yml`):** Gitleaks secret leak detection, npm dependency audit, and Trivy filesystem/config scanning.
+  - **E2E Integration Suite (`e2e.yml`):** Boots full 18-container stack with health checks, executes automated suites, and uploads failure logs.
+  - **Release & Staging CD (`release.yml`, `deploy-staging.yml`):** Automates GitHub Releases, publishes release compose definitions (`docker-compose.release.yml`), and triggers staging deployments.
+
+---
+
+## 🚀 4. Remaining Roadmap (Phases 15 & 16)
 
 To transform this into a production-ready enterprise WebRTC platform, the following phases outlined in [`STEP.MD`](file:///c:/Users/swaru/OneDrive/Desktop/PROJECT/GOOGLE_MEET/STEP.MD) remain:
 
-1. **Phase 14 — CI/CD Pipeline**:  
-   - Setup GitHub Actions workflows to lint, test, build Docker images, verify observability sync (`sync-observability.ps1 -CheckOnly`), and apply database migrations automatically.
-2. **Phase 15 — Kubernetes Deployment**:  
+1. **Phase 15 — Kubernetes Deployment**:  
    - Provision Helm charts, ingress controllers, HPAs (Horizontal Pod Autoscalers), and StatefulSets for Coturn, reusing Prometheus alerts as `PrometheusRule` resources.
-3. **Phase 16 — Load Testing & Security**:  
+2. **Phase 16 — Load Testing & Security**:  
    - Conduct Artillery load tests, PgBouncer pooling, and security penetration hardening while monitoring Grafana dashboards for latency and saturation.
 
 ---

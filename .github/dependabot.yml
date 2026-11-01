@@ -1,0 +1,89 @@
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    groups:
+      actions:
+        patterns: ["*"]
+
+  - package-ecosystem: "npm"
+    directory: "/FRONTEND/web"
+    schedule:
+      interval: "weekly"
+    groups:
+      dependencies:
+        patterns: ["*"]
+
+  - package-ecosystem: "npm"
+    directory: "/services/api-gateway"
+    schedule:
+      interval: "weekly"
+    groups:
+      dependencies:
+        patterns: ["*"]
+
+  - package-ecosystem: "npm"
+    directory: "/services/auth-service"
+    schedule:
+      interval: "weekly"
+    groups:
+      dependencies:
+        patterns: ["*"]
+
+  - package-ecosystem: "npm"
+    directory: "/services/user-service"
+    schedule:
+      interval: "weekly"
+    groups:
+      dependencies:
+        patterns: ["*"]
+
+  - package-ecosystem: "npm"
+    directory: "/services/room-service"
+    schedule:
+      interval: "weekly"
+    groups:
+      dependencies:
+        patterns: ["*"]
+
+  - package-ecosystem: "npm"
+    directory: "/services/signaling-service"
+    schedule:
+      interval: "weekly"
+    groups:
+      dependencies:
+        patterns: ["*"]
+
+  - package-ecosystem: "npm"
+    directory: "/services/chat-service"
+    schedule:
+      interval: "weekly"
+    groups:
+      dependencies:
+        patterns: ["*"]
+
+  - package-ecosystem: "npm"
+    directory: "/services/sfu-service"
+    schedule:
+      interval: "weekly"
+    groups:
+      dependencies:
+        patterns: ["*"]
+
+  - package-ecosystem: "npm"
+    directory: "/services/recording-service"
+    schedule:
+      interval: "weekly"
+    groups:
+      dependencies:
+        patterns: ["*"]
+
+  - package-ecosystem: "npm"
+    directory: "/services/notification-service"
+    schedule:
+      interval: "weekly"
+    groups:
+      dependencies:
+        patterns: ["*"]

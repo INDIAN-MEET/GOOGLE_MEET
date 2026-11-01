@@ -1,0 +1,197 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main, phase-14-cicd]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      services: ${{ steps.filter.outputs.services }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+      shared: ${{ steps.filter.outputs.shared }}
+      all_services: ${{ steps.set-all.outputs.all_services }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          list-files: json
+          filters: |
+            frontend:
+              - 'FRONTEND/web/**'
+            shared:
+              - 'shared/observability/**'
+              - 'scripts/sync-observability.ps1'
+            api-gateway:
+              - 'services/api-gateway/**'
+              - 'shared/observability/**'
+            auth-service:
+              - 'services/auth-service/**'
+              - 'shared/observability/**'
+            user-service:
+              - 'services/user-service/**'
+              - 'shared/observability/**'
+            room-service:
+              - 'services/room-service/**'
+              - 'shared/observability/**'
+            signaling-service:
+              - 'services/signaling-service/**'
+              - 'shared/observability/**'
+            chat-service:
+              - 'services/chat-service/**'
+              - 'shared/observability/**'
+            sfu-service:
+              - 'services/sfu-service/**'
+              - 'shared/observability/**'
+            recording-service:
+              - 'services/recording-service/**'
+              - 'shared/observability/**'
+            notification-service:
+              - 'services/notification-service/**'
+              - 'shared/observability/**'
+      - id: set-all
+        run: |
+          ALL='["api-gateway","auth-service","user-service","room-service","signaling-service","chat-service","sfu-service","recording-service","notification-service"]'
+          if [ "${{ github.event_name }}" = "push" ] || [ "${{ steps.filter.outputs.shared }}" = "true" ]; then
+            echo "services=$ALL" >> "$GITHUB_OUTPUT"
+          else
+            # Collect changed services
+            CHANGED=()
+            for s in api-gateway auth-service user-service room-service signaling-service chat-service sfu-service recording-service notification-service; do
+              if [ "${{ steps.filter.outputs[s] }}" = "true" ]; then
+                CHANGED+=("\"$s\"")
+              fi
+            done
+            if [ ${#CHANGED[@]} -eq 0 ]; then
+              echo "services=[]" >> "$GITHUB_OUTPUT"
+            else
+              JSON_ARRAY="[$(IFS=,; echo "${CHANGED[*]}")]"
+              echo "services=$JSON_ARRAY" >> "$GITHUB_OUTPUT"
+            fi
+          fi
+
+  backend:
+    needs: changes
+    if: ${{ needs.changes.outputs.services != '[]' }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        service: ${{ fromJSON(needs.changes.outputs.services) }}
+    defaults:
+      run:
+        working-directory: services/${{ matrix.service }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: services/${{ matrix.service }}/package-lock.json
+      - name: Install dependencies
+        run: npm ci
+      - name: Generate Prisma Client (if service uses Prisma)
+        if: ${{ contains(fromJSON('["auth-service","user-service","room-service","recording-service","notification-service"]'), matrix.service) }}
+        run: npx prisma generate
+      - name: Lint
+        run: npm run lint
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Run unit & smoke tests
+        run: npm test
+      - name: Build
+        run: npm run build
+
+  prisma-check:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        service:
+          - auth-service
+          - user-service
+          - room-service
+          - recording-service
+          - notification-service
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgrespassword
+          POSTGRES_DB: test_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    defaults:
+      run:
+        working-directory: services/${{ matrix.service }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: services/${{ matrix.service }}/package-lock.json
+      - run: npm ci
+      - name: Validate schema
+        run: npx prisma validate
+      - name: Apply migrations cleanly against fresh DB
+        env:
+          DATABASE_URL: postgresql://postgres:postgrespassword@localhost:5432/test_db?schema=public
+        run: npx prisma migrate deploy
+      - name: Detect schema drift
+        env:
+          DATABASE_URL: postgresql://postgres:postgrespassword@localhost:5432/test_db?schema=public
+        run: npx prisma migrate diff --from-migrations prisma/migrations --to-schema-datamodel prisma/schema.prisma --exit-code
+
+  observability-drift:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify shared observability sync
+        run: pwsh -File scripts/sync-observability.ps1 -CheckOnly
+      - name: Verify Grafana dashboard JSON validity
+        run: jq empty infra/grafana/dashboards/video-meet-overview.json
+
+  frontend:
+    needs: changes
+    if: ${{ github.event_name == 'push' || needs.changes.outputs.frontend == 'true' }}
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: FRONTEND/web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: FRONTEND/web/package-lock.json
+      - name: Install dependencies
+        run: npm ci
+      - name: Lint
+        run: npm run lint
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Unit test
+        run: npm test --if-present
+      - name: Build frontend
+        run: npm run build
+      - name: Upload frontend distribution artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: FRONTEND/web/dist
+          retention-days: 7

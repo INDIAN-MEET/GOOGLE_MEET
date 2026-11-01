@@ -46,7 +46,7 @@
 - [Phase 11 — Notification Service [✅ COMPLETED]](#phase-11--notification-service--completed)
 - [Phase 12 — Gateway Hardening [✅ COMPLETED]](#phase-12--gateway-hardening--completed)
 - [Phase 13 — Observability [✅ COMPLETED]](#phase-13--observability--completed)
-- [Phase 14 — CI/CD [⏳ PENDING]](#phase-14--cicd--pending)
+- [Phase 14 — CI/CD Pipeline [✅ COMPLETED]](#phase-14--cicd-pipeline--completed)
 - [Phase 15 — Kubernetes Deployment [⏳ PENDING]](#phase-15--kubernetes-deployment--pending)
 - [Phase 16 — Load Testing &amp; Security [⏳ PENDING]](#phase-16--load-testing--security--pending)
 - [Phase F — Frontend (React App) [✅ COMPLETED]](#phase-f--frontend-react-app--completed)
@@ -376,9 +376,23 @@ flowchart TD
 
 ---
 
-## Phase 14 — CI/CD [⏳ PENDING]
+## Phase 14 — CI/CD Pipeline [✅ COMPLETED]
 
-- GitHub Actions workflows for automated testing, linting, Docker image creation, and deployment.
+**Goal:** Automated GitHub Actions workflows for testing, linting, type-checking, Docker image publishing to GHCR, and staging continuous deployment.
+**Deliverables & Workflows:**
+- **Step 14.1 — Script Audit:** Completed audit of all 10 services (`services/*` and `FRONTEND/web`).
+- **Step 14.2 — Script Standardization:** Added `lint` (`oxlint`), `typecheck` (`tsc --noEmit`), `test` (Node test runner with smoke tests), and `build` across all 10 services.
+- **Step 14.3 & 14.4 — Change-Detected Matrix CI (`ci.yml`):** Implemented `dorny/paths-filter@v3` matrix job running only for changed services on PRs and all services on push to `main`.
+- **Step 14.5 — Prisma Migration Checks (`ci.yml`):** Automated `prisma validate`, `prisma migrate deploy`, and `prisma migrate diff` schema drift detection with PostgreSQL service containers.
+- **Step 14.6 — Observability Drift Check (`ci.yml`):** Automated `scripts/sync-observability.ps1 -CheckOnly` and Grafana dashboard JSON validation.
+- **Step 14.7 — Frontend Pipeline (`ci.yml`):** Automated linting, typechecking, building, and artifact uploading (`frontend-dist`).
+- **Step 14.8 — Docker Build & Cache Matrix (`docker.yml`):** Builds all 10 images with multi-stage buildx caching (`type=gha`), pushes versioned tags to GHCR on `main` and semver tags.
+- **Step 14.9 — Security Scans (`security.yml`):** Integrated Gitleaks for secret scanning, npm audit for dependencies, and Trivy filesystem/container vulnerability scanner.
+- **Step 14.10 — Full-Stack E2E Workflow (`e2e.yml`):** Boots complete Docker Compose stack and runs automated test suites (`e2e-all-services.mjs`, `e2e-gateway.mjs`, `e2e-notification.mjs`, `e2e-recording.mjs`, `e2e-observability.mjs`), with automated log capture on failure.
+- **Step 14.11 — Versioned Release Pipeline (`release.yml`):** Automatically creates GitHub Releases with release notes and attaches `docker-compose.release.yml` on semver tags (`v*.*.*`).
+- **Step 14.12 — Staging Continuous Deployment (`deploy-staging.yml`):** Automated SSH deployment pulling GHCR release images and applying Prisma migrations upon green E2E on `main`.
+- **Step 14.13 — Repo Hygiene & Protection:** Dependabot configuration (`.github/dependabot.yml`), `CODEOWNERS`, pull request template (`.github/pull_request_template.md`), and README badges.
+- **Step 14.14 — Documentation & Verification:** Comprehensive guides in `MD/Phase_14_cicd.md` and `docs/Phase_14_cicd.md`.
 
 ---
 

@@ -1,0 +1,75 @@
+name: E2E Integration Suite
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+  pull_request:
+    types: [labeled, synchronize]
+
+concurrency:
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  e2e:
+    name: Full-Stack Docker Compose E2E
+    # Run on main, on manual dispatch, or on PRs that have the 'run-e2e' label
+    if: ${{ github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch' || contains(github.event.pull_request.labels.*.name, 'run-e2e') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Prepare CI Environment
+        run: |
+          cp .env.example .env
+          echo "JWT_ACCESS_SECRET=ci-jwt-access-secret-32-characters-min" >> .env
+          echo "JWT_REFRESH_SECRET=ci-jwt-refresh-secret-32-characters-min" >> .env
+          echo "INTERNAL_SECRET=ci-internal-secret-for-service-auth" >> .env
+          echo "MEDIASOUP_ANNOUNCED_IP=127.0.0.1" >> .env
+          echo "METRICS_TOKEN=ci-metrics-token-12345" >> .env
+          echo "GRAFANA_ADMIN_PASSWORD=ci-grafana-password" >> .env
+
+      - name: Build and Start Stack
+        run: docker compose up -d --build --wait
+
+      - name: Run E2E All-Services Suite (15 REST checks)
+        run: node scripts/e2e-all-services.mjs
+
+      - name: Run Gateway Hardening & Rate-Limiting E2E
+        run: node scripts/e2e-gateway.mjs
+
+      - name: Run Notification & Mailpit E2E
+        run: node scripts/e2e-notification.mjs
+
+      - name: Run Recording Lifecycle E2E
+        run: node scripts/e2e-recording.mjs
+
+      - name: Run Observability & Prometheus Assertions
+        run: node scripts/e2e-observability.mjs
+
+      - name: Collect Container Logs on Failure
+        if: failure()
+        run: |
+          mkdir -p logs
+          docker compose logs > logs/docker-compose-all.log
+          docker ps -a > logs/docker-ps.log
+
+      - name: Upload Logs Artifact
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-failure-logs
+          path: logs/
+          retention-days: 7
+
+      - name: Tear Down Stack
+        if: always()
+        run: docker compose down -v

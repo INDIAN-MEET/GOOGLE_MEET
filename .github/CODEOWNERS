@@ -1,0 +1,19 @@
+# Global fallback
+* @INDIAN-MEET
+
+# Services
+/services/api-gateway/          @INDIAN-MEET
+/services/auth-service/         @INDIAN-MEET
+/services/user-service/         @INDIAN-MEET
+/services/room-service/         @INDIAN-MEET
+/services/signaling-service/    @INDIAN-MEET
+/services/chat-service/         @INDIAN-MEET
+/services/sfu-service/          @INDIAN-MEET
+/services/recording-service/    @INDIAN-MEET
+/services/notification-service/ @INDIAN-MEET
+/FRONTEND/                      @INDIAN-MEET
+
+# Infrastructure & CI/CD
+/.github/                       @INDIAN-MEET
+/infra/                         @INDIAN-MEET
+/shared/                        @INDIAN-MEET

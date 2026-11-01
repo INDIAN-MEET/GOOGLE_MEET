@@ -24,8 +24,10 @@
   "description": "**Port:** 4006 (Planned) | **Engine:** Mediasoup v3 (Node.js & C++ WebRTC Engine)   **Status:** ⏳ Phase 9 Pending Implementation",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "tsx watch --env-file=.env server.ts",
+    "lint": "oxlint",
+    "typecheck": "tsc --noEmit",
+    "test": "tsx --test src/smoke.test.ts",
     "build": "tsc",
     "start": "node dist/server.js"
   },
