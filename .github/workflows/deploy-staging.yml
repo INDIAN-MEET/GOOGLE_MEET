@@ -41,3 +41,4 @@ jobs:
             echo "Running health check..."
             curl -f http://localhost:4000/ready || exit 1
             echo "Deployment to staging complete!"
+

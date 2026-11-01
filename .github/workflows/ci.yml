@@ -195,3 +195,4 @@ jobs:
           name: frontend-dist
           path: FRONTEND/web/dist
           retention-days: 7
+

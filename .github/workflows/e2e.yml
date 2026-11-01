@@ -73,3 +73,4 @@ jobs:
       - name: Tear Down Stack
         if: always()
         run: docker compose down -v
+
