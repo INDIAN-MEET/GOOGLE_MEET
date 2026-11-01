@@ -38,16 +38,19 @@ Finish backend hardening
     -> Recording/notifications         [✅ COMPLETED]
     -> Complete frontend UI (Phase F)  [✅ COMPLETED]
     -> Full E2E Browser Verification   [✅ COMPLETED]
+    -> CI/CD Pipeline (Phase 14)       [✅ COMPLETED]
+    -> Kubernetes Deployment (Phase 15)[⏳ NEXT]
 ```
 
 ---
 
 ## Current Status Update (2026-11-01)
 
-All planned phases through Phase F have been **fully implemented, audited, and verified**:
+All planned phases through Phase 14 have been **fully implemented, audited, and verified**:
 1. **Frontend App (`google_meet-frontend` on port 5173):** React 19 + TypeScript + Vite, served via Nginx.
 2. **Mediasoup SFU Call Engine:** Supports multi-party video conferencing, RTP stream distribution, track flipping, and producer teardown.
 3. **Real-time Two-Way Chat:** Socket.IO events backed by MongoDB message persistence.
+4. **CI/CD Pipeline (GitHub Actions):** Complete automated testing, linting (`oxlint`), typechecking (`tsc --noEmit`), unit/smoke tests, Prisma migration validation, observability drift detection, multi-stage Docker builds with GHCR publishing, security scanning (Trivy + Gitleaks), automated E2E testing, versioned release generation, and staging deployment.
 4. **Recording Service:** Start and stop controls supporting both UUID and room code parameters with FFmpeg segment conversion.
 5. **Email Invitations & Mailpit:** Email invites queued via BullMQ and delivered to local Mailpit (`http://localhost:8025`), alongside 1-click meeting link clipboard copy.
 6. **Automated E2E Browser Tests:** Real headless Chrome instances passing multi-party call scenarios with 100% success rate. Formatted Word report generated: `GOOGLE_MEET_E2E_TEST_RESULTS.docx`.

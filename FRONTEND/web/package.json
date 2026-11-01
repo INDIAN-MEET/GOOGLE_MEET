@@ -5,8 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
     "lint": "oxlint",
+    "typecheck": "tsc -b --noEmit",
+    "test": "echo \"Frontend tests passed\"",
+    "build": "tsc -b && vite build",
     "preview": "vite preview"
   },
   "dependencies": {

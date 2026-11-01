@@ -1,0 +1,211 @@
+services:
+  # ==========================================================================
+  # INFRA — databases & cache
+  # ==========================================================================
+  postgres:
+    image: postgres:16-alpine
+    container_name: postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-postgres}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./infra/postgres-init:/docker-entrypoint-initdb.d
+
+  mongo:
+    image: mongo:7
+    container_name: mongo
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+
+  # ==========================================================================
+  # APPLICATION SERVICES (GHCR Prebuilt Images)
+  # ==========================================================================
+  api-gateway:
+    image: ghcr.io/${IMAGE_OWNER:-indian-meet}/videomeet-api-gateway:${IMAGE_TAG:-latest}
+    container_name: api-gateway
+    restart: unless-stopped
+    ports:
+      - "4000:4000"
+    env_file:
+      - ./services/api-gateway/.env.docker
+      - ./infra/observability.env
+    environment:
+      OTEL_SERVICE_NAME: api-gateway
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4000/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    depends_on:
+      - redis
+      - auth-service
+      - user-service
+      - room-service
+      - chat-service
+      - recording-service
+      - notification-service
+
+  auth-service:
+    image: ghcr.io/${IMAGE_OWNER:-indian-meet}/videomeet-auth-service:${IMAGE_TAG:-latest}
+    container_name: auth-service
+    restart: unless-stopped
+    ports:
+      - "4001:4001"
+    env_file:
+      - ./services/auth-service/.env.docker
+      - ./infra/observability.env
+    environment:
+      OTEL_SERVICE_NAME: auth-service
+    depends_on:
+      - postgres
+      - redis
+
+  user-service:
+    image: ghcr.io/${IMAGE_OWNER:-indian-meet}/videomeet-user-service:${IMAGE_TAG:-latest}
+    container_name: user-service
+    restart: unless-stopped
+    ports:
+      - "4002:4002"
+    env_file:
+      - ./services/user-service/.env.docker
+      - ./infra/observability.env
+    environment:
+      OTEL_SERVICE_NAME: user-service
+    depends_on:
+      - postgres
+      - redis
+
+  room-service:
+    image: ghcr.io/${IMAGE_OWNER:-indian-meet}/videomeet-room-service:${IMAGE_TAG:-latest}
+    container_name: room-service
+    restart: unless-stopped
+    ports:
+      - "4003:4003"
+    env_file:
+      - ./services/room-service/.env.docker
+      - ./infra/observability.env
+    environment:
+      OTEL_SERVICE_NAME: room-service
+    depends_on:
+      - postgres
+      - redis
+
+  signaling-service:
+    image: ghcr.io/${IMAGE_OWNER:-indian-meet}/videomeet-signaling-service:${IMAGE_TAG:-latest}
+    container_name: signaling-service
+    restart: unless-stopped
+    ports:
+      - "4004:4004"
+    env_file:
+      - ./services/signaling-service/.env.docker
+      - ./infra/observability.env
+    environment:
+      OTEL_SERVICE_NAME: signaling-service
+    depends_on:
+      - redis
+
+  chat-service:
+    image: ghcr.io/${IMAGE_OWNER:-indian-meet}/videomeet-chat-service:${IMAGE_TAG:-latest}
+    container_name: chat-service
+    restart: unless-stopped
+    ports:
+      - "4005:4005"
+    env_file:
+      - ./services/chat-service/.env.docker
+      - ./infra/observability.env
+    environment:
+      OTEL_SERVICE_NAME: chat-service
+    depends_on:
+      - mongo
+      - redis
+
+  sfu-service:
+    image: ghcr.io/${IMAGE_OWNER:-indian-meet}/videomeet-sfu-service:${IMAGE_TAG:-latest}
+    container_name: sfu-service
+    restart: unless-stopped
+    ports:
+      - "4006:4006"
+      - "20000-20050:20000-20050/udp"
+    env_file:
+      - ./services/sfu-service/.env.docker
+      - ./infra/observability.env
+    environment:
+      OTEL_SERVICE_NAME: sfu-service
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4006/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  recording-service:
+    image: ghcr.io/${IMAGE_OWNER:-indian-meet}/videomeet-recording-service:${IMAGE_TAG:-latest}
+    container_name: recording-service
+    restart: unless-stopped
+    ports:
+      - "4007:4007"
+    env_file:
+      - ./services/recording-service/.env.docker
+      - ./infra/observability.env
+    environment:
+      OTEL_SERVICE_NAME: recording-service
+    volumes:
+      - recordings_data:/recordings
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4007/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    depends_on:
+      - postgres
+      - redis
+
+  notification-service:
+    image: ghcr.io/${IMAGE_OWNER:-indian-meet}/videomeet-notification-service:${IMAGE_TAG:-latest}
+    container_name: notification-service
+    restart: unless-stopped
+    ports:
+      - "4008:4008"
+    env_file:
+      - ./services/notification-service/.env.docker
+      - ./infra/observability.env
+    environment:
+      OTEL_SERVICE_NAME: notification-service
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4008/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    depends_on:
+      - postgres
+      - redis
+
+  frontend:
+    image: ghcr.io/${IMAGE_OWNER:-indian-meet}/videomeet-frontend:${IMAGE_TAG:-latest}
+    container_name: frontend
+    restart: unless-stopped
+    ports:
+      - "5173:80"
+    depends_on:
+      - api-gateway
+      - signaling-service
+
+volumes:
+  postgres_data:
+  mongo_data:
+  recordings_data:
+

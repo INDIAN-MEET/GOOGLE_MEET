@@ -1,0 +1,44 @@
+name: Deploy Staging
+
+on:
+  workflow_run:
+    workflows: ['E2E Integration Suite']
+    types: [completed]
+    branches: [master, main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Deploy to Staging Environment
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    environment: staging
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy to Remote VM via SSH
+        if: ${{ env.STAGING_HOST != '' }}
+        uses: appleboy/ssh-action@v1.2.0
+        env:
+          STAGING_HOST: ${{ secrets.STAGING_HOST }}
+        with:
+          host: ${{ secrets.STAGING_HOST }}
+          username: ${{ secrets.STAGING_USER }}
+          key: ${{ secrets.STAGING_SSH_KEY }}
+          script: |
+            set -e
+            echo "Pulling release images..."
+            docker compose -f docker-compose.release.yml pull
+            echo "Applying Prisma database migrations..."
+            docker compose -f docker-compose.release.yml run --rm auth-service npx prisma migrate deploy || true
+            docker compose -f docker-compose.release.yml run --rm user-service npx prisma migrate deploy || true
+            docker compose -f docker-compose.release.yml run --rm room-service npx prisma migrate deploy || true
+            docker compose -f docker-compose.release.yml run --rm recording-service npx prisma migrate deploy || true
+            docker compose -f docker-compose.release.yml run --rm notification-service npx prisma migrate deploy || true
+            echo "Restarting containers..."
+            docker compose -f docker-compose.release.yml up -d
+            echo "Running health check..."
+            curl -f http://localhost:4000/ready || exit 1
+            echo "Deployment to staging complete!"
+

@@ -1,6 +1,10 @@
 
 # Google Meet Clone — Microservices Video Calling App
 
+[![CI](https://github.com/INDIAN-MEET/GOOGLE_MEET/actions/workflows/ci.yml/badge.svg)](https://github.com/INDIAN-MEET/GOOGLE_MEET/actions/workflows/ci.yml)
+[![Docker](https://github.com/INDIAN-MEET/GOOGLE_MEET/actions/workflows/docker.yml/badge.svg)](https://github.com/INDIAN-MEET/GOOGLE_MEET/actions/workflows/docker.yml)
+[![Security Scans](https://github.com/INDIAN-MEET/GOOGLE_MEET/actions/workflows/security.yml/badge.svg)](https://github.com/INDIAN-MEET/GOOGLE_MEET/actions/workflows/security.yml)
+
 A Node.js/TypeScript microservices application for real-time video calling. Clients connect to a single API Gateway for HTTP; the Signaling Service is accessed directly (bypasses the Gateway) via WebSocket for WebRTC signaling.
 
 ---

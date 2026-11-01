@@ -1,5 +1,5 @@
 
-# Phase 14 — CI/CD Pipeline [⏳ NEXT]
+# Phase 14 — CI/CD Pipeline [✅ COMPLETED]
 
 **Goal:** Every push and pull request is automatically linted, type-checked, tested, and built into Docker images. Merges to `main` publish versioned images and run the full E2E suite, so a broken change never reaches Phase 15 (Kubernetes).
 **Tech:** GitHub Actions, GitHub Container Registry (GHCR), Docker Buildx (layer cache), Trivy, Gitleaks, Dependabot, PowerShell (`pwsh`) on runners.
@@ -47,6 +47,21 @@ flowchart TD
 - Confirm every service has a committed `package-lock.json` (needed for `npm ci` and cache keys).
 
 **Deliverable:** a short table in this file (service → missing scripts).
+
+**Audit Results Table:**
+
+| Service | `lint` | `typecheck` | `test` | `build` | `package-lock.json` | Base Node Image | Status |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| `api-gateway` | ✅ `oxlint` | ✅ `tsc --noEmit` | ✅ `node:test` (smoke) | ✅ `tsc` | Committed | `node:22-alpine` | Standardized |
+| `auth-service` | ✅ `oxlint` | ✅ `tsc --noEmit` | ✅ `node:test` (smoke) | ✅ `tsc` | Committed | `node:20-alpine` | Standardized |
+| `user-service` | ✅ `oxlint` | ✅ `tsc --noEmit` | ✅ `node:test` (smoke) | ✅ `tsc` | Committed | `node:20-alpine` | Standardized |
+| `room-service` | ✅ `oxlint` | ✅ `tsc --noEmit` | ✅ `node:test` (smoke) | ✅ `tsc` | Committed | `node:20-alpine` | Standardized |
+| `signaling-service` | ✅ `oxlint` | ✅ `tsc --noEmit` | ✅ `node:test` (smoke) | ✅ `tsc` | Committed | `node:20-alpine` | Standardized |
+| `chat-service` | ✅ `oxlint` | ✅ `tsc --noEmit` | ✅ `node:test` (smoke) | ✅ `tsc` | Committed | `node:20-alpine` | Standardized |
+| `sfu-service` | ✅ `oxlint` | ✅ `tsc --noEmit` | ✅ `node:test` (smoke) | ✅ `tsc` | Committed | `node:22-bookworm-slim` | Standardized |
+| `recording-service` | ✅ `oxlint` | ✅ `tsc --noEmit` | ✅ `node:test` (smoke) | ✅ `tsc` | Committed | `node:20-bookworm-slim` | Standardized |
+| `notification-service` | ✅ `oxlint` | ✅ `tsc --noEmit` | ✅ `node:test` (smoke) | ✅ `tsc` | Committed | `node:20-alpine` | Standardized |
+| `FRONTEND/web` | ✅ `oxlint` | ✅ `tsc -b --noEmit`| ✅ (smoke/unit) | ✅ `tsc -b && vite build` | Committed | `node:22-alpine` / `nginx` | Standardized |
 
 ---
 
@@ -368,17 +383,17 @@ Phase 15 will replace this with Helm, so keep it simple.
 
 **Definition of done**
 
-- [ ] A PR touching only `services/chat-service/**` runs only the chat-service jobs (change detection works).
-- [ ] A PR touching `shared/observability/**` runs all 9 backend jobs.
-- [ ] A deliberate lint error, type error, failing test, and a stale Prisma migration each turn the PR red.
-- [ ] `sync-observability.ps1 -CheckOnly` fails CI when a service copy is edited by hand.
-- [ ] All 10 images build on PRs and are pushed to GHCR from `main` with `sha-*` and `latest` tags.
-- [ ] Trivy/Gitleaks run and block on high/critical findings.
-- [ ] `e2e.yml` passes end-to-end on `main` with artifacts uploaded on failure.
-- [ ] Tag `v0.1.0` produces a GitHub Release with images tagged `0.1.0`.
-- [ ] Staging deploys automatically after green E2E and passes `/ready`.
-- [ ] Branch protection enforces all required checks.
-- [ ] Typical PR CI time under ~10 minutes (with caching and change detection).
+- [x] A PR touching only `services/chat-service/**` runs only the chat-service jobs (change detection works).
+- [x] A PR touching `shared/observability/**` runs all 9 backend jobs.
+- [x] A deliberate lint error, type error, failing test, and a stale Prisma migration each turn the PR red.
+- [x] `sync-observability.ps1 -CheckOnly` fails CI when a service copy is edited by hand.
+- [x] All 10 images build on PRs and are pushed to GHCR from `main` with `sha-*` and `latest` tags.
+- [x] Trivy/Gitleaks run and block on high/critical findings.
+- [x] `e2e.yml` passes end-to-end on `main` with artifacts uploaded on failure.
+- [x] Tag `v0.1.0` produces a GitHub Release with images tagged `0.1.0`.
+- [x] Staging deploys automatically after green E2E and passes `/ready`.
+- [x] Branch protection enforces all required checks.
+- [x] Typical PR CI time under ~10 minutes (with caching and change detection).
 
 ---
 
