@@ -18,9 +18,9 @@ jobs:
       shared: ${{ steps.filter.outputs.shared }}
       all_services: ${{ steps.set-all.outputs.all_services }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - id: filter
-        uses: dorny/paths-filter@v3
+        uses: dorny/paths-filter@v4
         with:
           list-files: json
           filters: |
@@ -89,8 +89,8 @@ jobs:
       run:
         working-directory: services/${{ matrix.service }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
@@ -138,8 +138,8 @@ jobs:
       run:
         working-directory: services/${{ matrix.service }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
@@ -159,7 +159,7 @@ jobs:
   observability-drift:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Verify shared observability sync
         run: pwsh -File scripts/sync-observability.ps1 -CheckOnly
       - name: Verify Grafana dashboard JSON validity
@@ -173,8 +173,8 @@ jobs:
       run:
         working-directory: FRONTEND/web
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
@@ -190,7 +190,7 @@ jobs:
       - name: Build frontend
         run: npm run build
       - name: Upload frontend distribution artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: frontend-dist
           path: FRONTEND/web/dist
